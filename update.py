@@ -4,7 +4,9 @@
 # Jok3r update
 ###
 import git
+import os
 import sys
+from pathlib import Path
 
 from lib.core.Config import *
 from lib.core.ProcessLauncher import ProcessLauncher
@@ -12,6 +14,49 @@ from lib.core.Settings import Settings
 from lib.output.Logger import logger
 from lib.output.Output import Output
 from lib.utils.NetUtils import NetUtils
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+VENV_DIR = PROJECT_ROOT / '.venv'
+
+
+def _venv_executable(name):
+    """Return the path to an executable inside the Jok3r virtualenv."""
+    if os.name == 'nt':
+        return VENV_DIR / 'Scripts' / f'{name}.exe'
+    return VENV_DIR / 'bin' / name
+
+
+def ensure_virtualenv(upgrade_pip=True):
+    """Ensure the Jok3r virtual environment exists and optionally upgrade pip."""
+    if not VENV_DIR.exists():
+        logger.info('No Jok3r virtual environment detected, creating one in {}'
+                    .format(VENV_DIR))
+        returncode, _ = ProcessLauncher(
+            '"{}" -m venv "{}"'.format(sys.executable, VENV_DIR)).start()
+        if returncode != 0:
+            logger.error('Failed to create the Jok3r virtual environment '
+                         '(exitcode = {})'.format(returncode))
+            sys.exit(1)
+
+    python_cmd = _venv_executable('python')
+    if not python_cmd.exists():
+        logger.error('Virtual environment is missing the Python binary at {}'
+                     .format(python_cmd))
+        sys.exit(1)
+
+    pip_cmd = _venv_executable('pip')
+
+    if upgrade_pip:
+        logger.info('Upgrading pip in the Jok3r virtual environment...')
+        returncode, _ = ProcessLauncher(
+            '"{}" -m pip install --upgrade pip'.format(python_cmd)).start()
+        if returncode != 0:
+            logger.error('Failed to upgrade pip inside the Jok3r virtual environment '
+                         '(exitcode = {})'.format(returncode))
+            sys.exit(1)
+
+    return pip_cmd
 
 
 if __name__ == '__main__':
@@ -31,6 +76,8 @@ if __name__ == '__main__':
     else:
         logger.error('Not connected to Internet, cannot continue !')
         sys.exit(1)
+
+    ensure_virtualenv(upgrade_pip=False)
 
     # ------------------------------------------------------------------------------------
     print()
@@ -81,15 +128,16 @@ if __name__ == '__main__':
         # runs install of required libraries
         logger.info('requirements.txt has been updated. Will install python '
                     'libraries...')
+        pip_cmd = ensure_virtualenv()
         returncode, _ = ProcessLauncher(
-            'pip3 install requirements.txt').start()
+            '"{}" install -r requirements.txt'.format(pip_cmd)).start()
         if returncode != 0:
-            logger.error('An error occured during execution of "pip3 install '
-                         'requirements.txt" (exitcode = {})'.format(returncode))
+            logger.error('An error occured during execution of "{} install '
+                         '-r requirements.txt" (exitcode = {})'.format(pip_cmd, returncode))
             sys.exit(1)
         else:
-            logger.success('"pip3 install requirements.txt" finished with success '
-                           'returncode')
+            logger.success('"{} install -r requirements.txt" finished with success '
+                           'returncode'.format(pip_cmd))
 
     else:
         logger.info('No change in dependencies to install')
@@ -97,6 +145,7 @@ if __name__ == '__main__':
     # ------------------------------------------------------------------------------------
     print()
     Output.title2('Step #4: Perform toolbox diff...')
+    toolbox_change = False
     if '{}{}'.format(TOOLBOX_CONF_FILE, CONF_EXT) not in gitoutput:
         logger.info('Toolbox settings ({}{}) has not been updated, no further check '
                     'needed'.format(TOOLBOX_CONF_FILE, CONF_EXT))
@@ -127,7 +176,6 @@ if __name__ == '__main__':
            and len(diff['updated']) == 0 \
            and len(diff['deleted']) == 0:
             logger.info('No change in toolbox settings detected')
-            toolbox_change = False
         else:
             toolbox_change = True
 

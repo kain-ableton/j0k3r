@@ -8,6 +8,13 @@ The command `toolbox` allows to manage the hacking tools used by *Jok3r*.
 
     usage: python3 jok3r.py toolbox <args>
 
+.. note::
+   On local installations, activate the Jok3r virtual environment first::
+
+       source ./.venv/bin/activate
+
+   Alternatively call the CLI via ``./.venv/bin/python jok3r.py``.
+
     optional arguments:
       -h, --help                    show this help message and exit
 

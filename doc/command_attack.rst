@@ -8,6 +8,14 @@ The command `attack` is where security checks against targets are started.
 
     usage: python3 jok3r.py attack <args>
 
+.. note::
+   Activate the Jok3r virtual environment before running attack commands::
+
+       source ./.venv/bin/activate
+
+   Alternatively, prefix the CLI with ``./.venv/bin/python`` when running outside
+   Docker containers.
+
     optional arguments:
       -h, --help                             show this help message and exit
 

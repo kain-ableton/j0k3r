@@ -8,6 +8,13 @@ The command `toolbox` allows to manage the hacking tools used by *Jok3r*.
 
     usage: python3 jok3r.py toolbox <args>
 
+.. note::
+   On local installations, activate the Jok3r virtual environment first::
+
+       source ./.venv/bin/activate
+
+   Alternatively call the CLI via ``./.venv/bin/python jok3r.py``.
+
     optional arguments:
       -h, --help                    show this help message and exit
 
@@ -19,8 +26,8 @@ The command `toolbox` allows to manage the hacking tools used by *Jok3r*.
       --show-all                    Show full toolbox content
       --install <service>           Install the tools for a given service
       --install-all                 Install all the tools in the toolbox
-      --update <service>            Update the tools for a given service
-      --update-all                  Update all tools in the toolbox
+      --update <service>            Update the installed tools for a given service
+      --update-all                  Update all installed tools in the toolbox
       --uninstall <service>         Uninstall the tools for a given service
       --uninstall-tool <tool-name>  Uninstall a given tool
       --uninstall-all               Uninstall all tools in the toolbox

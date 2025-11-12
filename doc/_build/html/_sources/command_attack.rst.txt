@@ -8,6 +8,14 @@ The command `attack` is where security checks against targets are started.
 
     usage: python3 jok3r.py attack <args>
 
+.. note::
+   Activate the Jok3r virtual environment before running attack commands::
+
+       source ./.venv/bin/activate
+
+   Alternatively, prefix the CLI with ``./.venv/bin/python`` when running outside
+   Docker containers.
+
     optional arguments:
       -h, --help                             show this help message and exit
 
@@ -65,7 +73,7 @@ This mode is used to run security checks against only one target.
 
 .. code-block:: console
 
-    python3 jok3r.py attack -t 192.168.1.42 -s mssql
+    python3 jok3r.py attack -t 192.168.1.42:1433 -s mssql
 
 * Example to run checks against web application located at https://www.example.com/webapp/:
 
