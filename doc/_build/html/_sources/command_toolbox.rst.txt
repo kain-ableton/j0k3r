@@ -45,6 +45,8 @@ Show the Toolbox content
 .. note::
     The toolbox is defined in the configuration file ``settings/toolbox.conf``.
     It can be easily customized in order to add new tools.
+    The configuration file also exposes a ``[metadata]`` section where the
+    ``schema_version`` must match the framework version supported by Jok3r.
 
 
 Install the Tools

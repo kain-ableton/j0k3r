@@ -20,6 +20,7 @@ import sys
 from collections import OrderedDict
 
 from lib.core.Config import *
+from lib.core.Exceptions import SettingsException
 from lib.utils.FileUtils import FileUtils
 from lib.utils.OrderedDefaultDict import OrderedDefaultDict
 from lib.utils.StringUtils import StringUtils
@@ -40,6 +41,7 @@ class Toolbox:
         self.services = services
         # Organize tools in dict {service: [tools]}
         self.tools = OrderedDefaultDict(list, {k: [] for k in services})
+        self._tools_by_name = OrderedDict()
 
     # ------------------------------------------------------------------------------------
     # Dict-like accessors for self.tools
@@ -80,8 +82,20 @@ class Toolbox:
         :rtype: bool
         """
         if tool.target_service not in self.services:
-            return False
+            raise SettingsException('Unknown target service "{service}" for tool '
+                                    '"{tool}"'.format(service=tool.target_service,
+                                                       tool=tool.name))
+
+        identifier = tool.name.lower()
+        if identifier in self._tools_by_name:
+            existing = self._tools_by_name[identifier]
+            raise SettingsException('Tool "{tool}" already registered for '
+                                    'service "{service}"'.format(
+                                        tool=tool.name,
+                                        service=existing.target_service))
+
         self.tools[tool.target_service].append(tool)
+        self._tools_by_name[identifier] = tool
         return True
 
     def get_tool(self, tool_name):
@@ -93,11 +107,7 @@ class Toolbox:
         :return: Tool if found, None otherwise
         :rtype: Tool|None
         """
-        for service in self.services:
-            for tool in self.tools[service]:
-                if tool_name.lower() == tool.name.lower():
-                    return tool
-        return None
+        return self._tools_by_name.get(tool_name.lower())
 
     def nb_tools(self, filter_service=None, only_installed=False):
         """

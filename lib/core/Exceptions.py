@@ -8,6 +8,10 @@ class SettingsException(Exception):
     pass
 
 
+class EnvironmentException(Exception):
+    """Raised when runtime or environment checks fail."""
+
+
 class TargetException(Exception):
     pass
 
