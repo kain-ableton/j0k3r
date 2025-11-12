@@ -1,4 +1,6 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
 
 print_green() {
     BOLD_GREEN=$(tput bold ; tput setaf 2)
@@ -30,6 +32,11 @@ print_delimiter() {
     echo
 }
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="${SCRIPT_DIR}/.venv"
+VENV_PYTHON="${VENV_DIR}/bin/python"
+VENV_PIP="${VENV_DIR}/bin/pip"
+
 echo
 echo
 print_blue "=============================="
@@ -49,7 +56,7 @@ fi
 OS=`(lsb_release -sd || grep NAME /etc/*-release) 2> /dev/null`
 print_blue "[~] Detected OS:"
 echo $OS
-if [[ `echo $OS | egrep -i '(kali|debian|ubuntu)'` ]]; then
+if echo "$OS" | egrep -iq '(kali|debian|ubuntu)'; then
     print_green "[+] Debian-based Linux OS detected !"
 else
     print_red "[!] No Debian-based Linux OS detected (Debian/Ubuntu/Kali). Will not be able to continue !"
@@ -59,9 +66,60 @@ echo
 echo
 
 # -----------------------------------------------------------------------------
+# Verify Python3 availability (required for Kali 2025 environments)
+
+if ! command -v python3 >/dev/null 2>&1; then
+    print_red "[!] Python3 is required but not installed"
+    exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# Prepare Python virtual environment for Jok3r dependencies
+
+if ! dpkg-query -W -f='${Status}' python3-venv 2>/dev/null | grep -q "ok installed"; then
+    print_blue "[~] Installing python3-venv package required for virtual environments"
+    apt-get update
+    apt-get install -y python3-venv
+    if ! dpkg-query -W -f='${Status}' python3-venv 2>/dev/null | grep -q "ok installed"; then
+        print_red "[!] Failed to install python3-venv"
+        exit 1
+    fi
+fi
+
+if [ ! -d "${VENV_DIR}" ]; then
+    print_blue "[~] Creating Jok3r Python virtual environment at ${VENV_DIR}"
+    python3 -m venv "${VENV_DIR}"
+    if [ $? -ne 0 ]; then
+        print_red "[!] Failed to create Jok3r virtual environment"
+        exit 1
+    fi
+else
+    print_green "[+] Jok3r Python virtual environment already exists"
+fi
+
+if [ ! -x "${VENV_PYTHON}" ]; then
+    print_red "[!] Jok3r virtual environment is missing the python binary"
+    exit 1
+fi
+
+print_blue "[~] Upgrading pip inside Jok3r virtual environment"
+"${VENV_PYTHON}" -m pip install --upgrade pip
+if [ $? -ne 0 ]; then
+    print_red "[!] Failed to upgrade pip inside the Jok3r virtual environment"
+    exit 1
+fi
+
+if [ ! -x "${VENV_PIP}" ]; then
+    print_red "[!] pip not found inside the Jok3r virtual environment"
+    exit 1
+fi
+
+print_delimiter
+
+# -----------------------------------------------------------------------------
 # Add Kali repositories if not on Kali (Debian/Ubuntu)
 
-if [[ ! $(grep "deb http://http.kali.org/kali kali-rolling main" /etc/apt/sources.list) ]]; then 
+if ! grep -q "deb http://http.kali.org/kali kali-rolling main" /etc/apt/sources.list; then
     print_blue "[~] Add Kali repository (because missing in /etc/apt/sources.list)"
     cp /etc/apt/sources.list /etc/apt/sources.list.bak
     echo "deb http://http.kali.org/kali kali-rolling main non-free contrib" >> /etc/apt/sources.list
@@ -92,10 +150,10 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Git
 
-if ! [ -x "$(command -v git)" ]; then
+if ! command -v git >/dev/null 2>&1; then
     print_blue "[~] Install git ..."
     apt-get install -y git
-    if [ -x "$(command -v git)" ]; then
+    if command -v git >/dev/null 2>&1; then
         print_green "[+] Git installed successfully"
     else
         print_red "[!] An error occured during Git install"
@@ -152,11 +210,11 @@ unzip
 wget
 zlib1g-dev
 "
-for package in $PACKAGES; do    
-    if [[ ! $(dpkg-query -W -f='${Status}' $package 2>/dev/null | grep "ok installed") ]]; then
+for package in $PACKAGES; do
+    if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "ok installed"; then
         echo
         print_blue "[~] Install ${package} ..."
-        apt-get install -y $package 
+        apt-get install -y "$package"
     fi
 done
 print_delimiter
@@ -164,10 +222,10 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Metasploit-framework
 
-if ! [ -x "$(command -v msfconsole)" ]; then
+if ! command -v msfconsole >/dev/null 2>&1; then
     print_blue "[~] Install Metasploit ..."
     apt-get install -y metasploit-framework 
-    if [ -x "$(command -v msfconsole)" ]; then
+    if command -v msfconsole >/dev/null 2>&1; then
         print_green "[+] Metasploit installed successfully"
     else
         print_red "[!] An error occured during Metasploit install"
@@ -181,10 +239,10 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Nmap 
 
-if ! [ -x "$(command -v nmap)" ]; then
+if ! command -v nmap >/dev/null 2>&1; then
     print_blue "[~] Install Nmap ..."
     apt-get install -y nmap 
-    if [ -x "$(command -v nmap)" ]; then
+    if command -v nmap >/dev/null 2>&1; then
         print_green "[+] Nmap installed successfully"
     else
         print_red "[!] An error occured during Nmap install"
@@ -198,10 +256,10 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Tcpdump
 
-if ! [ -x "$(command -v tcpdump)" ]; then
+if ! command -v tcpdump >/dev/null 2>&1; then
     print_blue "[~] Install tcpdump ..."
     apt-get install -y tcpdump
-    if [ -x "$(command -v tcpdump)" ]; then
+    if command -v tcpdump >/dev/null 2>&1; then
         print_green "[+] tcpdump installed successfully"
     else
         print_red "[!] An error occured during tcpdump install"
@@ -214,7 +272,7 @@ print_delimiter
 
 # -----------------------------------------------------------------------------
 
-# if ! [ -x "$(command -v npm)" ]; then
+# if ! command -v npm >/dev/null 2>&1; then
 #     print_green "[~] Install NodeJS ..."
 #     curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
 #     apt-get install -y nodejs
@@ -225,81 +283,51 @@ print_delimiter
 
 # -----------------------------------------------------------------------------
 # Install Python and related packages
-print_blue "[~] Install Python 2.7 + 3 and useful related packages (if missing)"
+print_blue "[~] Install Python 3 and useful related packages (if missing)"
 
 PACKAGES="
-python
-python2.7
 python3
-python-pip
 python3-pip
-python-dev
 python3-dev
-python-setuptools
 python3-setuptools
 python3-distutils
-python-ipy
-python-nmap
-python3-pymysql
+python3-venv
+python3-wheel
 python3-psycopg2
+python3-pymysql
 python3-shodan
 "
 
-for package in $PACKAGES; do    
-    if [[ ! $(dpkg-query -W -f='${Status}' $package 2>/dev/null | grep "ok installed") ]]; then
+for package in $PACKAGES; do
+    if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "ok installed"; then
         echo
         print_blue "[~] Install ${package} ..."
-        apt-get install -y $package 
+        apt-get install -y "$package"
     fi
 done
 
-pip2 install --upgrade pip
-pip3 install --upgrade pip
-# pip3 uninstall -y psycopg2
-# pip3 install psycopg2-binary
-if [ -x "$(command -v python2.7)" ]; then
-    print_green "[+] Python2.7 installed successfully"
-else
-    print_red "[!] An error occured during Python2.7 install"
-    exit 1
-fi 
-if [ -x "$(command -v python3)" ]; then
+if command -v python3 >/dev/null 2>&1; then
     print_green "[+] Python3 installed successfully"
 else
-    print_red "[!] An error occured during Python2.7 install"
+    print_red "[!] An error occured during Python3 install"
     exit 1
-fi 
-if [ -x "$(command -v pip2)" ]; then
-    print_green "[+] pip2 installed successfully"
-else
-    print_red "[!] An error occured during pip2 install"
-    exit 1
-fi 
-if [ -x "$(command -v pip3)" ]; then
+fi
+if command -v pip3 >/dev/null 2>&1; then
     print_green "[+] pip3 installed successfully"
 else
     print_red "[!] An error occured during pip3 install"
     exit 1
-fi 
+fi
 print_delimiter
 
 # -----------------------------------------------------------------------------
 # Install Python virtualenv
 
-if ! [ -x "$(command -v virtualenv)" ]; then
-    print_blue "[~] Install python virtual environment packages"
-    pip2 install virtualenv
-    pip3 install virtualenv
-    # pip3 install virtualenvwrapper
-    # source /usr/local/bin/virtualenvwrapper.sh
-    if [ -x "$(command -v virtualenv)" ]; then
-        print_green "[+] virtualenv installed successfully"
-    else
-        print_red "[!] An error occured during virtualenv install"
-        exit 1
-    fi
+print_blue "[~] Python3 virtual environments handled via built-in venv module"
+if command -v virtualenv >/dev/null 2>&1; then
+    print_green "[+] Legacy virtualenv command already installed"
 else
-    print_green "[+] Python virtualenv is already installed"
+    print_blue "[~] Skipping virtualenv (python3 -m venv will be used)"
 fi
 print_delimiter
 
@@ -313,83 +341,10 @@ print_delimiter
 
 print_blue "[~] Install common Python libraries..."
 
-LIBPY2="
-argcomplete
-asn1crypto
-bcrypt
-beautifulsoup4
-bs4
-certifi
-cffi
-chardet
-colorama
-colorlog
-configparser
-cryptography
-cssselect
-dnspython
-entrypoints
-enum34
-Flask
-future
-futures
-gpg
-html-similarity
-html5lib
-humanize
-ipaddress
-IPy
-keyring
-keyrings.alt
-ldap3
-ldapdomaindump
-lxml
-macholib
-MarkupSafe
-maxminddb
-paramiko
-parsel
-passlib
-pluginbase
-proxy-db
-py2-ipaddress
-pyasn1
-pycparser
-pycrypto
-pycryptodomex
-pycurl
-PyGObject
-pymssql
-PyNaCl
-pyOpenSSL
-pystache
-python-nmap
-pyxdg
-requests
-requests-mock
-scapy
-SecretStorage
-six
-termcolor
-urllib3
-virtualenv
-w3lib
-webencodings
-Werkzeug
-"
-
-PIP2FREEZE=$(pip2 freeze)
-for lib in $LIBPY2; do    
-    if [[ ! $(echo $PIP2FREEZE | grep -i $lib) ]]; then
-        echo
-        print_blue "[~] Install Python library ${lib} (py2)"
-        pip2 install $lib
-    fi
-done
-
 LIBPY3="
 aiohttp
 ansi2html
+argcomplete
 asn1crypto
 async-timeout
 asyncio
@@ -408,18 +363,24 @@ cmd2
 colorama
 colored
 colorlog
+configparser
 cryptography
+cssselect
 dnspython
 docutils
 enlighten
 entrypoints
 Flask
 future
+html-similarity
 html5lib
 humanfriendly
+humanize
 idna
 imagesize
 inflect
+ipaddress
+IPy
 ipparser
 itsdangerous
 keyring
@@ -428,12 +389,16 @@ ldap3
 ldapdomaindump
 logutils
 lxml
+macholib
 MarkupSafe
+maxminddb
 multidict
 netaddr
 ntlm-auth
 packaging
 paramiko
+parsel
+passlib
 pbr
 Pillow
 pluginbase
@@ -441,16 +406,17 @@ ply
 pockets
 prettytable
 prompt-toolkit
+proxy-db
 psycopg2
 psycopg2-binary
 pyasn1
 pycparser
-pycrypto
 pycryptodomex
 pycurl
 Pygments
 PyGObject
 pymongo
+pymssql
 PyMySQL
 PyNaCl
 pyodbc
@@ -462,14 +428,18 @@ pysnmp
 PySocks
 python-libnmap
 python-memcached
+python-nmap
 pytz
+pystache
 pyxdg
 PyYAML
 redis
 regex
 requests
+requests-mock
 requests-ntlm
 requests-toolbelt
+scapy
 SecretStorage
 selenium
 shodan
@@ -493,18 +463,19 @@ veryprettytable
 virtualenv
 virtualenv-clone
 virtualenvwrapper
+w3lib
 wcwidth
 webencodings
 Werkzeug
 yarl
 "
 
-PIP3FREEZE=$(pip3 freeze)
-for lib in $LIBPY3; do    
-    if [[ ! $(echo $PIP3FREEZE | grep -i $lib) ]]; then
+PIP3FREEZE=$("${VENV_PIP}" freeze)
+for lib in $LIBPY3; do
+    if ! echo "$PIP3FREEZE" | grep -iq "$lib"; then
         echo
         print_blue "[~] Install Python library ${lib} (py3)"
-        pip3 install $lib
+        "${VENV_PIP}" install $lib
     fi
 done
 
@@ -513,10 +484,10 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Jython
 
-if ! [ -x "$(command -v jython)" ]; then
+if ! command -v jython >/dev/null 2>&1; then
     print_blue "[~] Install Jython"
     apt-get install -y jython
-    if [ -x "$(command -v jython)" ]; then
+    if command -v jython >/dev/null 2>&1; then
         print_green "[+] Jython installed successfully"
     else
         print_red "[!] An error occured during Jython install"
@@ -530,10 +501,10 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Ruby
 
-if ! [ -x "$(command -v ruby)" ]; then
+if ! command -v ruby >/dev/null 2>&1; then
     print_blue "[~] Install Ruby"
     apt-get install -y ruby ruby-dev
-    if [ -x "$(command -v ruby)" ]; then
+    if command -v ruby >/dev/null 2>&1; then
         print_green "[+] Ruby installed successfully"
     else
         print_red "[!] An error occured during Ruby install"
@@ -545,101 +516,21 @@ fi
 print_delimiter
 
 # -----------------------------------------------------------------------------
-# Install RVM (Ruby Version Manager)
+# Update Ruby bundler (system Ruby)
 
-if [ -a /usr/local/rvm/scripts/rvm ]; then
-    source /usr/local/rvm/scripts/rvm
+if command -v gem >/dev/null 2>&1; then
+    print_blue "[~] Update Ruby bundler"
+    gem install bundler
+    print_delimiter
 fi
-
-if ! [ -n "$(command -v rvm)" ]; then
-    print_blue "[~] Install Ruby RVM (Ruby Version Manager)"
-    curl -sSL https://get.rvm.io | bash
-    source /etc/profile.d/rvm.sh
-    if ! grep -q "source /etc/profile.d/rvm.sh" ~/.bashrc
-    then
-        echo "source /etc/profile.d/rvm.sh" >> ~/.bashrc
-    fi
-    # Make sure rvm will be available
-    if ! grep -q "[[ -s /usr/local/rvm/scripts/rvm ]] && source /usr/local/rvm/scripts/rvm" ~/.bashrc
-    then
-        echo "[[ -s /usr/local/rvm/scripts/rvm ]] && source /usr/local/rvm/scripts/rvm" >> ~/.bashrc
-    fi
-    source ~/.bashrc
-    source /usr/local/rvm/scripts/rvm
-    if [ -n "$(command -v rvm)" ]; then
-        print_green "[+] Ruby RVM installed successfully"
-    else
-        print_red "[!] An error occured during Ruby RVM install"
-        exit 1
-    fi   
-else
-    print_green "[+] Ruby RVM is already installed"
-fi
-print_delimiter
-
-# -----------------------------------------------------------------------------
-# Install different versions of Ruby via RVM
-
-if [ -a /usr/local/rvm/scripts/rvm ]; then
-    source /usr/local/rvm/scripts/rvm
-fi
-if [[ ! $(rvm list | grep ruby-2.4) ]]; then
-    print_blue "[~] Install Ruby 2.4 (old version)"
-    apt-get install -y ruby-psych
-    apt-get purge -y libssl-dev
-    apt-get install -y libssl1.0-dev
-    rvm install ruby-2.4
-    if [[ ! $(rvm list | grep ruby-2.4) ]]; then
-        print_red "[!] Ruby 2.4 has not been installed correctly with RVM"
-        exit 1
-    else
-        rvm list
-        print_green "[+] Ruby 2.4 has been successfully installed with RVM"
-    fi
-else
-    print_green "[+] Ruby 2.4 is already installed"
-fi
-print_delimiter
-
-# if ! rvm list | grep -q "ruby-2.5"
-# then
-#     print_green "[~] Install Ruby 2.5 (default)"
-#     rvm install ruby-2.5
-#     rvm --default use 2.5
-#     gem install ffi
-#     rvm list
-# fi
-
-if [[ ! $(rvm list | grep ruby-2.6) ]]; then
-    print_blue "[~] Install Ruby 2.6"
-    rvm install ruby-2.6
-    rvm --default use ruby-2.6
-    gem install ffi
-    if [[ ! $(rvm list | grep ruby-2.6) ]]; then
-        print_red "[!] Ruby 2.6 has not been installed correctly with RVM"
-        exit 1
-    else
-        rvm list
-        print_green "[+] Ruby 2.6 has been successfully installed with RVM"
-    fi
-else
-    print_green "[+] Ruby 2.6 is already installed"
-fi
-print_delimiter
-
-# -----------------------------------------------------------------------------
-
-print_blue "[~] Update Ruby bundler"
-gem install bundler
-print_delimiter
 
 # -----------------------------------------------------------------------------
 # Install Perl
 
-if ! [ -x "$(command -v perl)" ]; then
+if ! command -v perl >/dev/null 2>&1; then
     print_blue "[~] Install Perl"
     apt-get install -y perl 
-    if [ -x "$(command -v perl)" ]; then
+    if command -v perl >/dev/null 2>&1; then
         print_green "[+] Perl installed successfully"
     else
         print_red "[!] An error occured during Perl install"
@@ -653,10 +544,10 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install PHP
 
-if ! [ -x "$(command -v php)" ]; then
+if ! command -v php >/dev/null 2>&1; then
     print_blue "[~] Install PHP"
     apt-get install -y php
-    if [ -x "$(command -v php)" ]; then
+    if command -v php >/dev/null 2>&1; then
         print_green "[+] PHP installed successfully"
     else
         print_red "[!] An error occured during PHP install"
@@ -670,10 +561,10 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Java
 
-if ! [ -x "$(command -v java)" ]; then
+if ! command -v java >/dev/null 2>&1; then
     print_blue "[~] Install Java"
     apt-get install -y default-jdk
-    if [ -x "$(command -v jython)" ]; then
+    if command -v jython >/dev/null 2>&1; then
         print_green "[+] Java installed successfully"
     else
         print_red "[!] An error occured during Java install"
@@ -687,10 +578,10 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Firefox
 
-if ! [ -x "$(command -v firefox)" ]; then
+if ! command -v firefox >/dev/null 2>&1; then
     print_blue "[~] Install Firefox (for HTML reports and web screenshots)"
     apt-get install -y firefox-esr
-    if [ -x "$(command -v firefox)" ]; then
+    if command -v firefox >/dev/null 2>&1; then
         print_green "[+] Firefox installed successfully"
     else
         print_red "[!] An error occured during Firefox install"
@@ -704,35 +595,15 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Geckodriver
 
-if ! [ -x "$(command -v geckodriver)" ]; then
+if ! command -v geckodriver >/dev/null 2>&1; then
     print_blue "[~] Install Geckodriver (for web screenshots)"
-    cd /tmp/
-    MACHINE_TYPE=`uname -m`
-    if [ ${MACHINE_TYPE} == 'x86_64' ]; then
-        wget https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-linux64.tar.gz
-        tar -xvf geckodriver-v0.24.0-linux64.tar.gz
-        rm -f geckodriver-v0.24.0-linux64.tar.gz
-        mv geckodriver /usr/sbin
-        if [ -e /usr/bin/geckodriver ]; then
-            rm /usr/bin/geckodriver
-        fi
-        ln -s /usr/sbin/geckodriver /usr/bin/geckodriver
-    else
-        wget https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-linux32.tar.gz
-        tar -xvf geckodriver-v0.24.0-linux32.tar.gz
-        rm -f geckodriver-v0.24.0-linux32.tar.gz
-        mv geckodriver /usr/sbin
-        if [ -e /usr/bin/geckodriver ]; then
-            rm /usr/bin/geckodriver
-        fi
-        ln -s /usr/sbin/geckodriver /usr/bin/geckodriver
-    fi
-    if [ -x "$(command -v geckodriver)" ]; then
+    apt-get install -y geckodriver
+    if command -v geckodriver >/dev/null 2>&1; then
         print_green "[+] Geckodriver installed successfully"
     else
         print_red "[!] An error occured during Geckodriver install"
         exit 1
-    fi   
+    fi
 else
     print_green "[+] Geckodriver is already installed"
 fi
@@ -741,16 +612,24 @@ print_delimiter
 # -----------------------------------------------------------------------------
 
 print_blue "[~] Install Python3 libraries required by Jok3r (if missing)"
-pip3 install -r requirements.txt
-pip3 install --upgrade requests
+"${VENV_PIP}" install -r "${SCRIPT_DIR}/requirements.txt"
+if [ $? -ne 0 ]; then
+    print_red "[!] Failed to install Jok3r Python requirements"
+    exit 1
+fi
+"${VENV_PIP}" install --upgrade requests
+if [ $? -ne 0 ]; then
+    print_red "[!] Failed to upgrade requests inside the Jok3r virtual environment"
+    exit 1
+fi
 print_delimiter
 
 # -----------------------------------------------------------------------------
 
 print_blue "[~] Disable UserWarning related to psycopg2"
-pip3 uninstall psycopg2-binary -y
-pip3 uninstall psycopg2 -y
-pip3 install psycopg2-binary
+"${VENV_PIP}" uninstall psycopg2-binary -y
+"${VENV_PIP}" uninstall psycopg2 -y
+"${VENV_PIP}" install psycopg2-binary
 print_delimiter
 
 # -----------------------------------------------------------------------------

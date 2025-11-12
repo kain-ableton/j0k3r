@@ -1,4 +1,6 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
 
 print_green() {
     BOLD_GREEN=$(tput bold ; tput setaf 2)
@@ -30,6 +32,11 @@ print_delimiter() {
     echo
 }
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_PYTHON="${SCRIPT_DIR}/.venv/bin/python"
+
+cd "${SCRIPT_DIR}"
+
 echo
 echo
 print_blue "=============================="
@@ -47,11 +54,16 @@ fi
 # -----------------------------------------------------------------------------
 
 print_blue "[~] Running dependencies install script..."
-./install-dependencies.sh
+"${SCRIPT_DIR}/install-dependencies.sh"
 if [ $? -eq 0 ]; then
     print_green "[+] Dependencies install script exited with success returncode"
 else
     print_red "[!] Dependencies install script exited with error returncode"
+    exit 1
+fi
+
+if [ ! -x "${VENV_PYTHON}" ]; then
+    print_red "[!] Jok3r virtual environment is missing at ${VENV_PYTHON}"
     exit 1
 fi
 print_delimiter
@@ -59,7 +71,7 @@ print_delimiter
 # -----------------------------------------------------------------------------
 
 print_blue "[~] Running Jok3r full toolbox install (in non-interactive mode)..."
-python3 jok3r.py toolbox --install-all --auto
+"${VENV_PYTHON}" "${SCRIPT_DIR}/jok3r.py" toolbox --install-all --auto
 if [ $? -eq 0 ]; then
     print_green "[+] Jok3r toolbox install exited with success returncode"
 else
@@ -71,7 +83,7 @@ print_delimiter
 # -----------------------------------------------------------------------------
 
 print_blue "[~] Running automatic check of all installed tools (based on returncodes)..."
-python3 jok3r.py toolbox --check
+"${VENV_PYTHON}" "${SCRIPT_DIR}/jok3r.py" toolbox --check
 if [ $? -eq 0 ]; then
     print_green "[+] Toolbox automatic check exited with success returncode"
 else
@@ -83,7 +95,7 @@ print_delimiter
 # -----------------------------------------------------------------------------
 
 print_blue "[~] Print toolbox content"
-python3 jok3r.py toolbox --show-all
+"${VENV_PYTHON}" "${SCRIPT_DIR}/jok3r.py" toolbox --show-all
 
 # -----------------------------------------------------------------------------
 

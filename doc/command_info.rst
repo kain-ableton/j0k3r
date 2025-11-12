@@ -10,6 +10,13 @@ The command `info` is useful to get a quick overview of Jok3r settings.
 
     usage: python3 jok3r.py info <args>
 
+.. note::
+   Activate the Jok3r virtual environment before invoking info commands::
+
+       source ./.venv/bin/activate
+
+   You may also run ``./.venv/bin/python jok3r.py`` directly without activating it.
+
     optional arguments:
       -h, --help          show this help message and exit
 

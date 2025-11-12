@@ -197,6 +197,16 @@ Note: Of course, you can retrieve your local database ``local.db`` (with your sa
 Quick usage examples
 ====================
 
+.. note::
+
+   When running Jok3r directly on Kali/Debian hosts (outside of Docker), activate
+   the bundled virtual environment before invoking the CLI::
+
+       source ./.venv/bin/activate
+
+   Alternatively, prefix the commands below with ``./.venv/bin/python`` to use
+   the managed interpreter without activating the environment globally.
+
 Pentest Toolbox management
 --------------------------
 
@@ -864,6 +874,14 @@ Known Issues
 =============
 
 * Docker image is huge ! (it actually contains lots of tools and dependencies... Will try to reduce size later)
+
+
+======================
+Modernization Roadmaps
+======================
+
+* `Framework Improvements <doc/framework-improvements.md>`_
+* `Toolbox Enhancements <doc/toolbox-improvements.md>`_
 
 
 =============

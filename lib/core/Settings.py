@@ -89,6 +89,9 @@ from lib.utils.StringUtils import StringUtils
 from apikeys import API_KEYS
 
 
+SUPPORTED_TOOLBOX_SCHEMA_VERSIONS = {1}
+
+
 class Settings:
     """
     Class used to parse all settings files:
@@ -111,6 +114,7 @@ class Settings:
         self.toolbox = None  # Receives Toolbox object
         self.services = None  # Receives ServicesConfig object
         self.attack_profiles = None  # Receives AttackProfiles object
+        self.toolbox_schema_version = None
 
         # Check directory
         if not FileUtils.is_dir(SETTINGS_DIR):
@@ -187,18 +191,34 @@ class Settings:
 
     def __create_toolbox(self):
         """Create the toolbox and update self.toolbox."""
+        toolbox_parser = self.config_parsers[TOOLBOX_CONF_FILE]
+        schema_version = toolbox_parser.safe_get_int('metadata', 'schema_version', 1)
+        if schema_version not in SUPPORTED_TOOLBOX_SCHEMA_VERSIONS:
+            raise SettingsException('Unsupported toolbox schema version {version}. '
+                                    'Supported versions: {supported}'.format(
+                                        version=schema_version,
+                                        supported=', '.join(
+                                            [str(v) for v in sorted(
+                                                SUPPORTED_TOOLBOX_SCHEMA_VERSIONS)])))
+
+        self.toolbox_schema_version = schema_version
         self.toolbox = Toolbox(self, self.services.list_services(multi=True))
 
-        for section in self.config_parsers[TOOLBOX_CONF_FILE].sections():
+        for section in toolbox_parser.sections():
+            if section.lower() == 'metadata':
+                continue
+
             newtool = self.__create_tool(section)
             if newtool is not None:
-                if not self.toolbox.add_tool(newtool):
-                    logger.warning('[{filename}{ext} | Section "{section}"] Unable '
-                                   'to add tool "{tool}" into the toolbox'.format(
-                                       filename=TOOLBOX_CONF_FILE,
-                                       ext=CONF_EXT,
-                                       section=section,
-                                       tool=newtool.name))
+                try:
+                    self.toolbox.add_tool(newtool)
+                except SettingsException as exc:
+                    raise SettingsException('[{filename}{ext} | Section "{section}"] '
+                                            '{error}'.format(
+                                                filename=TOOLBOX_CONF_FILE,
+                                                ext=CONF_EXT,
+                                                section=section,
+                                                error=exc)) from exc
 
     def __create_tool(self, section):
         """
