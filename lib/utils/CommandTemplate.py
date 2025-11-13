@@ -4,7 +4,15 @@
 
 from urllib.parse import urlparse
 
-from tld import get_tld, TldDomainNotFound
+from tld import get_tld
+
+try:
+    # ``TldDomainNotFound`` lived in ``tld`` until 0.13, newer releases expose
+    # it from ``tld.exceptions`` only. Attempt the legacy import first so both
+    # series keep working without forcing a specific dependency pin.
+    from tld import TldDomainNotFound  # type: ignore
+except ImportError:  # pragma: no cover - depends on installed ``tld`` version
+    from tld.exceptions import TldDomainNotFound
 
 from lib.core.Config import TOOLBOX_DIR, WEBSHELLS_DIR, WORDLISTS_DIR
 from lib.utils.NetUtils import NetUtils
@@ -12,7 +20,6 @@ from lib.utils.NetUtils import NetUtils
 
 def _safe(value):
     """Return a safe string representation for replacement tokens."""
-
     return value or ''
 
 
@@ -36,7 +43,6 @@ def _extract_path(url):
 
 def expand_custom_command(template, target):
     """Expand the supported tokens inside a custom command template."""
-
     if not template:
         return ''
 
@@ -60,4 +66,3 @@ def expand_custom_command(template, target):
         expanded = expanded.replace(token, value)
 
     return expanded
-
