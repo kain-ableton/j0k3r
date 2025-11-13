@@ -5,15 +5,15 @@
 ###
 import sqlalchemy
 import sqlalchemy.orm
-import sqlalchemy.ext.declarative
 from contextlib import contextmanager
 
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import declarative_base
 
 from lib.core.Config import *
 
 
-Base = sqlalchemy.ext.declarative.declarative_base()
+Base = declarative_base()
 engine = sqlalchemy.create_engine('sqlite:///' + DB_FILE)
 Session = sqlalchemy.orm.sessionmaker(bind=engine)
 
