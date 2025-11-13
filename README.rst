@@ -893,7 +893,6 @@ Modernization Roadmaps
 
 * `Framework Improvements <doc/framework-improvements.md>`_
 * `Toolbox Enhancements <doc/toolbox-improvements.md>`_
-* `Framework Optimization Plan <doc/OPTIMIZATION_PLAN.rst>`_
 
 
 =============
