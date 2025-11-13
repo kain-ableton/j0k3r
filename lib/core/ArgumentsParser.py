@@ -581,6 +581,28 @@ class ArgumentsParser:
         logger.success('Attack session saved to {file}'.format(
             file=session_path))
 
+    @staticmethod
+    def __normalize_csv_list(value):
+        """Return a sanitized list from comma-separated CLI arguments."""
+
+        if not value:
+            return []
+
+        if isinstance(value, (list, tuple)):
+            candidates = value
+        else:
+            candidates = str(value).split(',')
+
+        cleaned = []
+        for item in candidates:
+            if item is None:
+                continue
+            token = str(item).strip()
+            if token:
+                cleaned.append(token)
+
+        return cleaned
+
     # ------------------------------------------------------------------------------------
     # Arguments checking for subcommand Toolbox
 
@@ -836,25 +858,35 @@ class ArgumentsParser:
         # Selection of categories of checks to run or to exclude
         categories = self.args.cat_only or self.args.cat_exclude
         if categories:
-            if isinstance(categories, str):
-                categories = categories.split(',')
-            for cat in categories:
-                if cat not in self.settings.services.list_all_categories():
+            requested_categories = self.__normalize_csv_list(categories)
+            if not requested_categories:
+                logger.error('No valid category specified.')
+                return False
+
+            available_categories = {
+                cat.lower(): cat for cat in self.settings.services.list_all_categories()
+            }
+
+            resolved_categories = []
+            for cat in requested_categories:
+                match = available_categories.get(cat.lower())
+                if not match:
                     logger.error('Category {cat} does not exist. '
                                  'Check "info --categories".'.format(cat=cat))
                     return False
+                resolved_categories.append(match)
 
-            # Store as list
             if self.args.cat_only:
-                self.args.cat_only = categories
+                self.args.cat_only = resolved_categories
             elif self.args.cat_exclude:
-                self.args.cat_exclude = categories
+                self.args.cat_exclude = resolved_categories
 
         # Selection of checks to run
         elif self.args.checks:
-            checks = (self.args.checks.split(',')
-                      if isinstance(self.args.checks, str)
-                      else self.args.checks)
+            checks = self.__normalize_csv_list(self.args.checks)
+            if not checks:
+                logger.error('No valid check name specified.')
+                return False
             for check in checks:
                 if not self.settings.services.is_existing_check(check):
                     logger.error('Check {check} does not exist. '

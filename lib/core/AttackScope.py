@@ -200,6 +200,62 @@ class AttackScope:
 
         self.__run_custom_commands(target)
 
+    def __run_custom_commands(self, target):
+        """Execute user-supplied custom commands for the current target."""
+
+        commands = getattr(self.arguments.args, 'custom_commands', None)
+        if not commands:
+            return
+
+        Output.title1('Custom commands for {target}'.format(target=target))
+
+        for index, template in enumerate(commands, start=1):
+            expanded = expand_custom_command(template, target).strip()
+            if not expanded:
+                logger.warning('Custom command #{idx} is empty after placeholder '
+                               'expansion, skipping.'.format(idx=index))
+                continue
+
+            if not self.fast_mode:
+                mode = Output.prompt_choice(
+                    'Run custom command #{idx}? [Y/n/f/q] '.format(idx=index),
+                    choices={
+                        'y': 'Yes',
+                        'n': 'No',
+                        'f': 'Switch to fast mode (do not prompt anymore)',
+                        'q': 'Quit the program',
+                    },
+                    default='y')
+            else:
+                logger.info('Run custom command #{idx}'.format(idx=index))
+                mode = 'y'
+
+            if mode == 'q':
+                logger.warning('Exit !')
+                sys.exit(0)
+            if mode == 'n':
+                logger.info('Skipping custom command #{idx}'.format(idx=index))
+                continue
+            if mode == 'f':
+                logger.info('Switch to fast mode')
+                self.fast_mode = True
+                self.arguments.args.fast_mode = True
+
+            Output.begin_cmd(expanded)
+            process = ProcessLauncher(expanded)
+            returncode, output = process.start()
+            Output.delimiter()
+
+            if returncode != 0:
+                logger.warning('Custom command #{idx} finished with exit code '
+                               '{code}'.format(idx=index, code=returncode))
+
+            output = StringUtils.interpret_ansi_escape_clear_lines(output)
+            if output:
+                print(output)
+
+            print()
+
     def __next_target(self):
         """
         Move to next target by incrementing current target id
@@ -208,55 +264,6 @@ class AttackScope:
             self.current_targetid = 1
         else:
             self.current_targetid += 1
-
-    def __run_custom_commands(self, target):
-        """Execute user-supplied custom commands for the current target."""
-
-        custom_commands = getattr(self.arguments.args, 'custom_commands', None)
-        if not custom_commands:
-            return
-
-        Output.title1('Custom command runner')
-
-        for index, template in enumerate(custom_commands, start=1):
-            cmdline = expand_custom_command(template, target).strip()
-            if not cmdline:
-                logger.warning('Custom command #{idx:02} is empty after token '
-                               'replacement, skipping'.format(idx=index))
-                continue
-
-            if self.arguments.args.fast_mode:
-                mode = 'y'
-            else:
-                mode = Output.prompt_choice(
-                    'Run custom command #{idx:02}? [Y/n/f/q] '.format(idx=index),
-                    choices={
-                        'y': 'Yes',
-                        'n': 'No',
-                        'f': 'Switch to fast mode (do not prompt anymore)',
-                        'q': 'Quit the program',
-                    },
-                    default='y')
-
-            if mode == 'q':
-                logger.warning('Exit !')
-                sys.exit(0)
-            if mode == 'n':
-                logger.info('Skipping this custom command')
-                continue
-            if mode == 'f':
-                logger.info('Switch to fast mode')
-                self.arguments.args.fast_mode = True
-
-            Output.begin_cmd(cmdline)
-            process = ProcessLauncher(cmdline)
-            returncode, _ = process.start()
-            Output.delimiter()
-            if returncode != 0:
-                logger.warning('Command has finished with an error exit code: '
-                               '{code}. A problem might have occured'.format(
-                                   code=returncode))
-            print()
 
     # ------------------------------------------------------------------------------------
     # Output methods
