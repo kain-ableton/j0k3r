@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import products_match
+from lib.smartmodules.matchstrings.registry import products_match
 
 # Match wafw00f 1.0.0
 WAFW00F_REGEXP = r'The site http.* is behind {} WAF\.'

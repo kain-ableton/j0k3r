@@ -11,7 +11,7 @@ from lib.output.Logger import logger
 from lib.output.Output import Output
 from lib.smartmodules.ContextUpdater import ContextUpdater
 from lib.smartmodules.MatchstringsProcessor import MatchstringsProcessor
-from lib.smartmodules.matchstrings.MatchStrings import *
+from lib.smartmodules.matchstrings.registry import *
 
 
 class SmartStart:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import products_match
+from lib.smartmodules.matchstrings.registry import products_match
 
 
 WIG_REGEXP = '{}\s*[VERSION]\s*CMS'
@@ -21,6 +21,9 @@ products_match['http']['web-framework'] = {
             WIG_REGEXP.format('CakePHP'),
             WIG_REGEXP2.format('CakePHP'),
         ],
+    },
+    'Apache Struts': {
+        'whatweb': '(?i)Struts',
     },
     'CodeIgniter': {
         'wappalyzer': 'CodeIgniter',

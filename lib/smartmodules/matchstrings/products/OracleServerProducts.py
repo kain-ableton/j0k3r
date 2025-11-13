@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import products_match
+from lib.smartmodules.matchstrings.registry import products_match
 
 # Examples:
 # product: Oracle TNS listener version: 12.1.0.2.0
