@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import os_match
+from lib.smartmodules.matchstrings.registry import os_match
 
 
 # Wappalyzer handles a some OS
 # Ref: https://www.wappalyzer.com/categories/operating-systems
 
-os_match = {
+os_match.update({
     'Apple OS X Darwin': {
         'wappalyzer': ['Darwin'],
     },
@@ -57,4 +57,4 @@ os_match = {
         'banner': ['ostype: Windows', 'Microsoft'],
         'wappalyzer': ['Windows'],
     },
-}
+})

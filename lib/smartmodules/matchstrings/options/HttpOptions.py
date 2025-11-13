@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import options_match
+from lib.smartmodules.matchstrings.registry import options_match
 
 
 # options_match['http'] = {
@@ -23,6 +23,12 @@ options_match['http'] = {
     'nmap': {
         'weblogic-t3-info: T3 protocol in use': {
             'name': 'weblogic-t3',
+            'value': 'true',
+        },
+    },
+    'davscan': {
+        '\\[\\+\\]\\s*WebDAV\\s+Enabled': {
+            'name': 'webdav',
             'value': 'true',
         },
     },

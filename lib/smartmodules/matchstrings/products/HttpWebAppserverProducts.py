@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import products_match
+from lib.smartmodules.matchstrings.registry import products_match
 
 
 WIG_REGEXP = '{}\s*[VERSION]\s*Platform'
@@ -90,6 +90,9 @@ products_match['http']['web-appserver'] = {
             'WebLogic Admin Console (\(https\))?\s*\(version [VERSION]\)',
             'WebLogic Admin Console (\(https\))?\s*\(version Any\)',
         ],
+    },
+    'OpenNMS': {
+        'whatweb': '(?i)OpenNMS',
     },
     'Railo': {
         'clusterd': [

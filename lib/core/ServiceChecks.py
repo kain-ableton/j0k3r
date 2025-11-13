@@ -166,7 +166,8 @@ class ServiceChecks:
         # logger.info('Categories of checks that will be run: {cats}'.format(
         #     cats=', '.join(categories)))
 
-        nb_checks = self.nb_checks()
+        nb_checks = sum(len(self.checks[cat]) for cat in self.categories
+                        if cat in filter_categories)
 
         # Initialize sub status/progress bar
         checks_progress = manager.counter(total=nb_checks+1,
@@ -187,13 +188,16 @@ class ServiceChecks:
             i = 1
             for check in self.checks[category]:
 
+                reverse_hint = ' [reverse shell required]' \
+                    if check.requires_reverse_shell() else ''
+
                 # Update status/progress bar
                 status = ' +--> Current check [{cur}/{total}]: {category} > ' \
                     '{checkname}'.format(
                         cur=j,
                         total=nb_checks,
                         category=check.category,
-                        checkname=check.name)
+                        checkname=check.name + reverse_hint)
 
                 checks_progress.desc = '{status}{fill}'.format(
                     status=status,
@@ -226,11 +230,12 @@ class ServiceChecks:
 
                     if check.check_target_compliance(target):
                         Output.title2('[{category}][Check {num:02}/{total:02}] '
-                                      '{name} > {description}'.format(
+                                      '{name}{hint} > {description}'.format(
                                           category=category.capitalize(),
                                           num=j,
                                           total=nb_checks,
                                           name=check.name,
+                                          hint=reverse_hint,
                                           description=check.description))
 
                         if not check.tool.installed:
@@ -250,22 +255,24 @@ class ServiceChecks:
 
                     else:
                         logger.info('[{category}][Check {num:02}/{total:02}] '
-                                    '{name} > Skipped because context requirements are '
+                                    '{name}{hint} > Skipped because context requirements are '
                                     'not matching the target'.format(
                                         name=check.name,
                                         category=category.capitalize(),
                                         num=j,
-                                        total=nb_checks))
+                                        total=nb_checks,
+                                        hint=reverse_hint))
                         time.sleep(.2)
                 else:
 
                     logger.info('[{category}][Check {num:02}/{total:02}] '
-                                '{name} > Skipped because the check has already '
+                                '{name}{hint} > Skipped because the check has already '
                                 'been run'.format(
                                     name=check.name,
                                     category=category.capitalize(),
                                     num=j,
-                                    total=nb_checks))
+                                    total=nb_checks,
+                                    hint=reverse_hint))
                     time.sleep(.2)
 
                 i += 1
@@ -340,6 +347,8 @@ class ServiceChecks:
         for checkname in filter_checks:
             print()
             check = self.get_check(checkname)
+            reverse_hint = ' [reverse shell required]' \
+                if check and check.requires_reverse_shell() else ''
 
             # Update status/progress bar
             status = ' +--> Current check [{cur}/{total}]: {category} > ' \
@@ -347,7 +356,7 @@ class ServiceChecks:
                     cur=i,
                     total=len(filter_checks),
                     category=check.category,
-                    checkname=checkname)
+                    checkname=checkname + reverse_hint)
 
             checks_progress.desc = '{status}{fill}'.format(
                 status=status,
@@ -377,11 +386,12 @@ class ServiceChecks:
 
                 if check.check_target_compliance(target):
 
-                    Output.title2('[Check {num:02}/{total:02}] {name} > '
+                    Output.title2('[Check {num:02}/{total:02}] {name}{hint} > '
                                   '{description}'.format(
                                       num=i,
                                       total=len(filter_checks),
                                       name=check.name,
+                                      hint=reverse_hint,
                                       description=check.description))
 
                     if not check.tool.installed:
@@ -400,21 +410,23 @@ class ServiceChecks:
 
                 else:
                     logger.info('[Check {num:02}/{total:02}] '
-                                '{name} > Skipped because context requirements are '
+                                '{name}{hint} > Skipped because context requirements are '
                                 'not matching the target'.format(
                                     name=check.name,
                                     num=i,
-                                    total=len(filter_checks)))
+                                    total=len(filter_checks),
+                                    hint=reverse_hint))
                     time.sleep(.2)
 
             else:
 
                 logger.info('[Check {num:02}/{total:02}] '
-                            '{name} > Skipped because the check has already '
+                            '{name}{hint} > Skipped because the check has already '
                             'been run'.format(
                                 name=check.name,
                                 num=i,
-                                total=len(filter_checks)))
+                                total=len(filter_checks),
+                                hint=reverse_hint))
                 time.sleep(.2)
 
             i += 1
@@ -435,6 +447,7 @@ class ServiceChecks:
             'Category',
             'Description',
             'Tool used',
+            'Reverse shell?',
             # '# Commands',
         ]
         for category in self.categories:
@@ -445,6 +458,7 @@ class ServiceChecks:
                     category,
                     check.description,
                     Output.colored(check.tool.name, color=color_tool),
+                    'Yes' if check.requires_reverse_shell() else 'No',
                     # len(check.commands),
                 ])
 

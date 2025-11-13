@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import vulns_match
+from lib.smartmodules.matchstrings.registry import vulns_match
 
 
 vulns_match['jdwp'] = {

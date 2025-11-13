@@ -8,7 +8,7 @@ import regex
 
 from lib.output.Logger import logger
 from lib.utils.StringUtils import StringUtils
-from lib.smartmodules.matchstrings.MatchStrings import *
+from lib.smartmodules.matchstrings.registry import *
 
 
 class MatchstringsProcessor:

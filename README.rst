@@ -126,6 +126,8 @@ Architecture
     :alt: Jok3r flowchart
 
 
+.. _installation:
+
 ============
 Installation
 ============
@@ -206,6 +208,15 @@ Quick usage examples
 
    Alternatively, prefix the commands below with ``./.venv/bin/python`` to use
    the managed interpreter without activating the environment globally.
+
+.. warning::
+
+   Many automated exploits in Jok3r expect to establish a reverse shell or other
+   callback to the operator. Ensure the target can reach your listener before
+   launching attacks: in Docker this typically means running with
+   ``--net=host`` (see the :ref:`Installation <installation>` section) and exposing any required firewall
+   ports on the host. Without a reachable callback path, several checks will
+   time out or report false negatives.
 
 Pentest Toolbox management
 --------------------------
@@ -882,6 +893,7 @@ Modernization Roadmaps
 
 * `Framework Improvements <doc/framework-improvements.md>`_
 * `Toolbox Enhancements <doc/toolbox-improvements.md>`_
+* `Framework Optimization Plan <doc/OPTIMIZATION_PLAN.rst>`_
 
 
 =============

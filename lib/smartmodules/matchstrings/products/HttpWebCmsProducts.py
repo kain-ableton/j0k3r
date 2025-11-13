@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import products_match
+from lib.smartmodules.matchstrings.registry import products_match
 
 
 # m = re.search('CMS: Joomla(.*Version: (?P<version>[0-9.]+)?)?', textjoomla, re.DOTALL)
@@ -224,6 +224,7 @@ products_match['http']['web-cms'] = {
             WIG_REGEXP.format('Drupal'),
             WIG_REGEXP2.format('Drupal'),
         ],
+        'whatweb': '(?i)Drupal(/[VERSION])?',
         'drupwn': 'Version detected: [VERSION]',
         'fingerprinter': '-a drupal[\s\S]*Intersection of potential versions returned only one version v[VERSION]',
         'cmsmap': 'Drupal Version: [VERSION]',
@@ -317,6 +318,7 @@ products_match['http']['web-cms'] = {
             WIG_REGEXP.format('Joomla\!'),
             WIG_REGEXP2.format('Joomla\!'),
         ],
+        'whatweb': '(?i)Joomla(/[VERSION])?',
         'fingerprinter': '-a joomla[\s\S]*Intersection of potential versions returned only one version v[VERSION]',
         'cmsmap': 'Joomla Version: [VERSION]',
         'joomscan': '\[\+\] Detecting Joomla Version\s*\n\s*\[\+\+\] Joomla [VERSION]',
@@ -689,6 +691,7 @@ products_match['http']['web-cms'] = {
             WIG_REGEXP.format('WordPress'),
             WIG_REGEXP2.format('WordPress'),
         ],
+        'whatweb': '(?i)WordPress(/[VERSION])?',
         'fingerprinter': '-a wordpress[\s\S]*Intersection of potential versions returned only one version v[VERSION]',
         'cmsmap': 'Wordpress Version: [VERSION]',
         'wpscan': 'WordPress version [VERSION] identified',

@@ -499,6 +499,28 @@ class Command:
         except Exception as e:
             pass
 
+    # ------------------------------------------------------------------------------------
+    # Reverse shell detection
+
+    def requires_reverse_shell(self):
+        """Heuristically detect whether the command requires a reverse shell."""
+
+        cmd_lower = self.cmdline.lower()
+
+        if '[localip]' in cmd_lower:
+            return True
+
+        if 'reverse' in cmd_lower and 'reverse-proxy' not in cmd_lower:
+            return True
+
+        if ' lhost' in cmd_lower and 'localhost' not in cmd_lower:
+            return True
+
+        if ' connectback' in cmd_lower or ' callback' in cmd_lower:
+            return True
+
+        return False
+
     def __replace_tag_specific_list(self, name, value):
         """
         Replace tags of a specific option of type LIST by the correct value in 

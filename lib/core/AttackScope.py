@@ -7,12 +7,14 @@ import sys
 import time
 
 from lib.core.Config import *
+from lib.core.ProcessLauncher import ProcessLauncher
 from lib.requester.ResultsRequester import ResultsRequester
 from lib.requester.ServicesRequester import ServicesRequester
 from lib.utils.StringUtils import StringUtils
 from lib.output.Logger import logger
 from lib.output.Output import Output
 from lib.output.StatusBar import *
+from lib.utils.CommandTemplate import expand_custom_command
 
 
 class AttackScope:
@@ -195,6 +197,64 @@ class AttackScope:
                            filter_checks=self.filter_checks,
                            attack_profile=self.attack_profile,
                            attack_progress=attack_progress)
+
+        self.__run_custom_commands(target)
+
+    def __run_custom_commands(self, target):
+        """Execute user-supplied custom commands for the current target."""
+
+        commands = getattr(self.arguments.args, 'custom_commands', None)
+        if not commands:
+            return
+
+        Output.title1('Custom commands for {target}'.format(target=target))
+
+        for index, template in enumerate(commands, start=1):
+            expanded = expand_custom_command(template, target).strip()
+            if not expanded:
+                logger.warning('Custom command #{idx} is empty after placeholder '
+                               'expansion, skipping.'.format(idx=index))
+                continue
+
+            if not self.fast_mode:
+                mode = Output.prompt_choice(
+                    'Run custom command #{idx}? [Y/n/f/q] '.format(idx=index),
+                    choices={
+                        'y': 'Yes',
+                        'n': 'No',
+                        'f': 'Switch to fast mode (do not prompt anymore)',
+                        'q': 'Quit the program',
+                    },
+                    default='y')
+            else:
+                logger.info('Run custom command #{idx}'.format(idx=index))
+                mode = 'y'
+
+            if mode == 'q':
+                logger.warning('Exit !')
+                sys.exit(0)
+            if mode == 'n':
+                logger.info('Skipping custom command #{idx}'.format(idx=index))
+                continue
+            if mode == 'f':
+                logger.info('Switch to fast mode')
+                self.fast_mode = True
+                self.arguments.args.fast_mode = True
+
+            Output.begin_cmd(expanded)
+            process = ProcessLauncher(expanded)
+            returncode, output = process.start()
+            Output.delimiter()
+
+            if returncode != 0:
+                logger.warning('Custom command #{idx} finished with exit code '
+                               '{code}'.format(idx=index, code=returncode))
+
+            output = StringUtils.interpret_ansi_escape_clear_lines(output)
+            if output:
+                print(output)
+
+            print()
 
     def __next_target(self):
         """

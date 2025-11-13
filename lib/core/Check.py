@@ -67,6 +67,13 @@ class Check:
 
     # ------------------------------------------------------------------------------------
 
+    def requires_reverse_shell(self):
+        """Determine whether any command in the check expects a reverse shell."""
+
+        return any(command.requires_reverse_shell() for command in self.commands)
+
+    # ------------------------------------------------------------------------------------
+
     def run(self,
             target,
             arguments,
