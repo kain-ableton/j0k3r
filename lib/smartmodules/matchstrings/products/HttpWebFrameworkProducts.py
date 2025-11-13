@@ -22,6 +22,9 @@ products_match['http']['web-framework'] = {
             WIG_REGEXP2.format('CakePHP'),
         ],
     },
+    'Apache Struts': {
+        'whatweb': '(?i)Struts',
+    },
     'CodeIgniter': {
         'wappalyzer': 'CodeIgniter',
     },

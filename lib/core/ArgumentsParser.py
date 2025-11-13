@@ -4,6 +4,8 @@
 # Core > Arguments parser
 ###
 # PYTHON_ARGCOMPLETE_OK
+import json
+import os
 import sys
 from collections import defaultdict
 
@@ -387,6 +389,33 @@ class ArgumentsParser:
             action='store_true',
             dest='debug',
             default=False)
+        running.add_argument(
+            '--custom-cmd',
+            help='Additional command to run for each target after built-in checks. '
+            'Supports standard Jok3r placeholders (e.g. [IP], [PORT]). '
+            'Option can be specified multiple times.',
+            action='append',
+            dest='custom_commands',
+            metavar='<command>',
+            default=None)
+
+        session_group = parser.add_argument_group(
+            Output.colored('Session management', attrs='bold'))
+        session_group.add_argument(
+            '--save-session',
+            help='Write the effective attack parameters to <file> for reuse.',
+            action='store',
+            dest='save_session',
+            metavar='<file>',
+            default=None)
+        session_group.add_argument(
+            '--load-session',
+            help='Load attack parameters from <file>. Command line options override '
+            'values from the session file.',
+            action='store',
+            dest='load_session',
+            metavar='<file>',
+            default=None)
 
         bruteforce = parser.add_argument_group(
             Output.colored('Bruteforce options', attrs='bold'))
@@ -449,6 +478,7 @@ class ArgumentsParser:
         parser.epilog = ATTACK_EXAMPLES
         self.subparser = parser
         self.args = parser.parse_args(sys.argv[2:])
+        self.__apply_attack_session(parser)
 
     # ------------------------------------------------------------------------------------
 
@@ -463,6 +493,93 @@ class ArgumentsParser:
             return self.check_args_db()
         else:
             return self.check_args_attack()
+
+    def __apply_attack_session(self, parser):
+        """Load attack parameters from a saved session file when requested."""
+
+        if self.mode != Mode.ATTACK:
+            return
+
+        session_file = getattr(self.args, 'load_session', None)
+        if not session_file:
+            return
+
+        session_path = os.path.abspath(os.path.expanduser(session_file))
+        if not os.path.isfile(session_path):
+            logger.error('Session file "{file}" does not exist.'.format(
+                file=session_path))
+            raise ArgumentsException()
+
+        try:
+            with open(session_path, 'r') as handler:
+                loaded = json.load(handler)
+        except (OSError, ValueError) as exc:
+            logger.error('Unable to load session file "{file}": {err}'.format(
+                file=session_path, err=exc))
+            raise ArgumentsException()
+
+        defaults = {action.dest: action.default for action in parser._actions
+                    if action.dest}
+
+        for key, value in loaded.items():
+            if key in ('save_session', 'load_session') or key not in defaults:
+                continue
+
+            current = getattr(self.args, key, None)
+            default_value = defaults.get(key)
+
+            if current not in (default_value, None):
+                continue
+
+            if key == 'custom_commands' and isinstance(value, str):
+                value = [value]
+
+            setattr(self.args, key, value)
+
+        self.args.load_session = session_path
+        logger.info('Loaded attack session from {file}'.format(
+            file=session_path))
+
+    def maybe_save_attack_session(self):
+        """Persist the current attack parameters to disk when requested."""
+
+        if self.mode != Mode.ATTACK:
+            return
+
+        session_file = getattr(self.args, 'save_session', None)
+        if not session_file:
+            return
+
+        session_path = os.path.abspath(os.path.expanduser(session_file))
+        session_dir = os.path.dirname(session_path)
+
+        if session_dir and not os.path.isdir(session_dir):
+            try:
+                os.makedirs(session_dir, exist_ok=True)
+            except OSError as exc:
+                logger.error('Unable to create directory "{dir}": {err}'.format(
+                    dir=session_dir, err=exc))
+                raise ArgumentsException()
+
+        allowed_keys = {action.dest for action in self.subparser._actions
+                        if action.dest}
+        data = {}
+
+        for key in allowed_keys:
+            if key in ('save_session', 'load_session'):
+                continue
+            data[key] = getattr(self.args, key, None)
+
+        try:
+            with open(session_path, 'w') as handler:
+                json.dump(data, handler, indent=2, sort_keys=True)
+        except OSError as exc:
+            logger.error('Unable to save session file "{file}": {err}'.format(
+                file=session_path, err=exc))
+            raise ArgumentsException()
+
+        logger.success('Attack session saved to {file}'.format(
+            file=session_path))
 
     # ------------------------------------------------------------------------------------
     # Arguments checking for subcommand Toolbox
@@ -719,7 +836,8 @@ class ArgumentsParser:
         # Selection of categories of checks to run or to exclude
         categories = self.args.cat_only or self.args.cat_exclude
         if categories:
-            categories = categories.split(',')
+            if isinstance(categories, str):
+                categories = categories.split(',')
             for cat in categories:
                 if cat not in self.settings.services.list_all_categories():
                     logger.error('Category {cat} does not exist. '
@@ -734,7 +852,9 @@ class ArgumentsParser:
 
         # Selection of checks to run
         elif self.args.checks:
-            checks = self.args.checks.split(',')
+            checks = (self.args.checks.split(',')
+                      if isinstance(self.args.checks, str)
+                      else self.args.checks)
             for check in checks:
                 if not self.settings.services.is_existing_check(check):
                     logger.error('Check {check} does not exist. '

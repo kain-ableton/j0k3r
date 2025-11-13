@@ -13,6 +13,7 @@ products_match['http']['web-language'] = {
             WIG_REGEXP.format('ASP\.NET'),
             WIG_REGEXP2.format('ASP\.NET'),
         ],
+        'whatweb': '(?i)X-Powered-By\\[ASP\.NET(/[VERSION])?\\]',
     },
     'CFML': {
         'wappalyzer': 'CFML',
@@ -28,6 +29,7 @@ products_match['http']['web-language'] = {
     },
     'Node.js': {
         'wappalyzer': 'Node.js',
+        'whatweb': '(?i)(PoweredBy|X-Powered-By)\\[Node\.js(/[VERSION])?\\]',
     },
     'Perl': {
         'wappalyzer': 'Perl',
@@ -38,11 +40,14 @@ products_match['http']['web-language'] = {
             WIG_REGEXP.format('PHP'),
             WIG_REGEXP2.format('PHP'),
         ],
+        'whatweb': '(?i)(PoweredBy|X-Powered-By)\\[PHP(/[VERSION])?\\]',
     },
     'Python': {
         'wappalyzer': 'Python',
+        'whatweb': '(?i)(PoweredBy|X-Powered-By)\\[Python(/[VERSION])?\\]',
     },
     'Ruby': {
         'wappalyzer': 'Ruby',
+        'whatweb': '(?i)(PoweredBy|X-Powered-By)\\[Ruby(/[VERSION])?\\]',
     },
 }

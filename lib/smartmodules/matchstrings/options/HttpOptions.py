@@ -26,5 +26,11 @@ options_match['http'] = {
             'value': 'true',
         },
     },
+    'davscan': {
+        '\\[\\+\\]\\s*WebDAV\\s+Enabled': {
+            'name': 'webdav',
+            'value': 'true',
+        },
+    },
 
 }
