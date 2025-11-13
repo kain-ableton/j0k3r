@@ -4,6 +4,7 @@
 # Core > Arguments parser
 ###
 # PYTHON_ARGCOMPLETE_OK
+import copy
 import json
 import os
 import sys
@@ -33,6 +34,7 @@ class ArgumentsParser:
         self.settings = settings
         self.mode = None
         self.args = None
+        self._attack_args_snapshot = None
 
         parser = argparse.ArgumentParser(
             usage=USAGE,
@@ -479,6 +481,7 @@ class ArgumentsParser:
         self.subparser = parser
         self.args = parser.parse_args(sys.argv[2:])
         self.__apply_attack_session(parser)
+        self.__snapshot_attack_cli_arguments()
 
     # ------------------------------------------------------------------------------------
 
@@ -540,6 +543,25 @@ class ArgumentsParser:
         logger.info('Loaded attack session from {file}'.format(
             file=session_path))
 
+    def __snapshot_attack_cli_arguments(self):
+        """Capture CLI arguments before normalization for session persistence."""
+
+        if self.mode != Mode.ATTACK or not self.subparser or not self.args:
+            self._attack_args_snapshot = None
+            return
+
+        allowed_keys = {action.dest for action in self.subparser._actions
+                        if action.dest}
+
+        snapshot = {}
+        for key in allowed_keys:
+            if key in ('save_session', 'load_session'):
+                continue
+
+            snapshot[key] = copy.deepcopy(getattr(self.args, key, None))
+
+        self._attack_args_snapshot = snapshot
+
     def maybe_save_attack_session(self):
         """Persist the current attack parameters to disk when requested."""
 
@@ -565,10 +587,21 @@ class ArgumentsParser:
                         if action.dest}
         data = {}
 
+        skipped = []
+
         for key in allowed_keys:
             if key in ('save_session', 'load_session'):
                 continue
-            data[key] = getattr(self.args, key, None)
+
+            if self._attack_args_snapshot is not None:
+                value = self._attack_args_snapshot.get(key)
+            else:
+                value = getattr(self.args, key, None)
+            if not self._is_json_serializable(value):
+                skipped.append(key)
+                continue
+
+            data[key] = value
 
         try:
             with open(session_path, 'w') as handler:
@@ -578,8 +611,23 @@ class ArgumentsParser:
                 file=session_path, err=exc))
             raise ArgumentsException()
 
+        if skipped:
+            logger.warning('Skipping non-serializable arguments while saving '
+                           'session: {items}'.format(items=', '.join(skipped)))
+
         logger.success('Attack session saved to {file}'.format(
             file=session_path))
+
+    @staticmethod
+    def _is_json_serializable(value):
+        """Return True if *value* can be JSON serialized."""
+
+        try:
+            json.dumps(value)
+        except TypeError:
+            return False
+
+        return True
 
     @staticmethod
     def __normalize_csv_list(value):
