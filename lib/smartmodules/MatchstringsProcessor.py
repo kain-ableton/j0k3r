@@ -1,476 +1,399 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 ###
-# SmartModules > Matchstrings Processor
+# SmartModules > Matchstrings Processor (refactor)
 ###
 import re
 import regex
+from typing import Any, Dict, Iterable, Optional, Tuple
 
 from lib.output.Logger import logger
 from lib.utils.StringUtils import StringUtils
-from lib.smartmodules.matchstrings.registry import *
+from lib.smartmodules.matchstrings.registry import (
+    creds_match,
+    options_match,
+    products_match,
+    vulns_match,
+    os_match,
+    VERSION_REGEXP,
+)
 
 
 class MatchstringsProcessor:
+    """Processes matchstrings to detect credentials, options, products, vulns and OS.
+    """
 
-    def __init__(self,
-                 service,
-                 tool_name,
-                 cmd_output,
-                 context_updater):
-        """
-        :param Service service: Target service model
-        :param str tool_name: Source of the data to process (tool name or other 
-                sources such as banner, original service name, wappalyzer)
-        :param str cmd_output: Data to process, most of the time is is command output 
-                (sanitized / special chars removed). In this case, it should be prepended
-                by command line
-        :param ContextUpdater context_updater: Context updater object
-        """
+    def __init__(
+        self,
+        service,
+        tool_name: str,
+        cmd_output: Optional[str],
+        context_updater,
+    ):
         self.service = service
         self.tool_name = tool_name
-        self.cmd_output = cmd_output or ''
+        self.cmd_output = cmd_output or ""
         self.cu = context_updater
+
+        # cache compiled patterns: key -> compiled regex object or None
+        self._pattern_cache: Dict[Tuple[str, int, str], Any] = {}
+
+    # ----------------------- Helpers -----------------------------------------
+
+    def _compile_pattern(self, pattern: str, flags: int = 0, engine: str = "re"):
+        """Compile and cache a pattern for the selected engine ('re' or 'regex').
+        Returns the compiled pattern or None if compilation failed.
+        """
+        key = (pattern, flags, engine)
+        if key in self._pattern_cache:
+            return self._pattern_cache[key]
+
+        try:
+            if engine == "regex":
+                compiled = regex.compile(pattern, flags)
+            else:
+                compiled = re.compile(pattern, flags)
+        except (re.error, regex.error) as e:
+            logger.warning(f"Error compiling matchstring [{pattern}]: {e}")
+            self._pattern_cache[key] = None
+            return None
+
+        self._pattern_cache[key] = compiled
+        return compiled
+
+    def _find_tokens(self, template: str) -> Iterable[int]:
+        """Yield integer token indices found in template like $1, $2, ...
+        """
+        for m in re.finditer(r"\$(\d+)", template):
+            yield int(m.group(1))
+
+    def __replace_tokens_from_matchobj(self, template: str, match: re.Match) -> Optional[str]:
+        """Replace tokens $N using named groups 'mN' (preferred), falling back to numeric groups.
+        """
+        output = template
+        for idx in sorted(set(self._find_tokens(template))):
+            token = f"${{idx}}"
+            mname = f"m{idx}"
+            # Prefer named group 'mN' if defined in groupdict, else try numeric group
+            if mname in match.groupdict():
+                val = match.group(mname) or ""
+            else:
+                try:
+                    val = match.group(idx) or ""
+                except IndexError:
+                    logger.smarterror(
+                        f"Invalid matchstring for service={{self.service.name}}, tool={{self.tool_name}}"
+                    )
+                    return None
+            output = output.replace(token, val)
+        return output
+
+    def __replace_tokens_from_captdict(self, template: str, captdict: Dict[str, list], index: int) -> Optional[str]:
+        """Replace tokens $N using capturesdict from regex.search().capturesdict().
+        """
+        output = template
+        for idx in sorted(set(self._find_tokens(template))):
+            token = f"${{idx}}"
+            key = f"m{idx}"
+            if key in captdict and index < len(captdict[key]):
+                val = captdict[key][index] or ""
+            else:
+                logger.smarterror(
+                    f"Invalid matchstring for service={{self.service.name}}, tool={{self.tool_name}}"
+                )
+                return None
+            output = output.replace(token, val)
+        return output
+
+    # ----------------------- Detection entry points --------------------------
+
+    def detect_credentials(self) -> None:
+        """Detect usernames/credentials from command output.
+        Supports two matching methods defined in matchstrings:
+         - finditer (default): uses re.finditer and named groups m1... or numeric groups
+         - search: uses regex.search and capturesdict() to collect repeated groups
+        """
+        if self.service.name not in creds_match:
+            return
+
+        svc_map = creds_match[self.service.name]
+        if self.tool_name not in svc_map:
+            return
+
+        p = svc_map[self.tool_name]
+
+        for pattern, spec in p.items():
+            logger.debug(f"Search for creds pattern: {{pattern}}")
+
+            if "user" not in spec:
+                logger.smarterror(
+                    f'Invalid matchstring for service={{self.service.name}}, tool={{self.tool_name}}: Missing "user" key'
+                )
+                continue
+
+            method = spec.get("meth", "finditer")
+            if method not in ("finditer", "search"):
+                method = "finditer"
+
+            # perform matching
+            try:
+                if method == "finditer":
+                    compiled = self._compile_pattern(pattern, flags=re.IGNORECASE | re.MULTILINE, engine="re")
+                    if not compiled:
+                        continue
+                    matches = compiled.finditer(self.cmd_output)
+                else:  # method == "search"
+                    compiled = self._compile_pattern(pattern, flags=regex.IGNORECASE, engine="regex")
+                    if not compiled:
+                        continue
+                    m = compiled.search(self.cmd_output)
+                    matches = [m] if m else []
+            except (re.error, regex.error) as e:
+                logger.warning(f"Error with matchstring [{pattern}], you should review it. Exception: {e}")
+                break
+
+            pattern_matched = False
+
+            # finditer: iterate re.Match objects
+            if method == "finditer":
+                for match in matches:
+                    pattern_matched = True
+                    user = self.__replace_tokens_from_matchobj(spec["user"], match)
+                    if user is None:
+                        continue
+
+                    cred_pass = None
+                    auth_type = None
+                    if "pass" in spec:
+                        cred_pass = self.__replace_tokens_from_matchobj(spec["pass"], match)
+                        if cred_pass is None:
+                            continue
+                    if "type" in spec:
+                        auth_type = self.__replace_tokens_from_matchobj(spec["type"], match)
+                        if auth_type is None:
+                            continue
+
+                    if cred_pass is not None:
+                        self.cu.add_credentials(username=user, password=cred_pass, auth_type=auth_type)
+                    else:
+                        self.cu.add_username(username=user, auth_type=auth_type)
+
+            # search: use regex capturesdict()
+            else:
+                # matches is a list with a single regex.Match or empty
+                if not matches:
+                    continue
+
+                m = matches[0]
+                captdict = m.capturesdict()
+                if "m1" not in captdict:
+                    logger.smarterror(
+                        f'Invalid matchstring for service={{self.service.name}}, tool={{self.tool_name}}: Missing match group'
+                    )
+                    return
+
+                nb_groups = len(captdict["m1"])
+                for i in range(nb_groups):
+                    pattern_matched = True
+                    user = self.__replace_tokens_from_captdict(spec["user"], captdict, i)
+                    if user is None:
+                        continue
+
+                    cred_pass = None
+                    auth_type = None
+                    if "pass" in spec:
+                        cred_pass = self.__replace_tokens_from_captdict(spec["pass"], captdict, i)
+                        if cred_pass is None:
+                            continue
+                    if "type" in spec:
+                        auth_type = self.__replace_tokens_from_captdict(spec["type"], captdict, i)
+                        if auth_type is None:
+                            continue
+
+                    if cred_pass is not None:
+                        self.cu.add_credentials(username=user, password=cred_pass, auth_type=auth_type)
+                    else:
+                        self.cu.add_username(username=user, auth_type=auth_type)
+
+            if pattern_matched:
+                logger.debug("Creds pattern matches (user only)")
+                return
 
     # ------------------------------------------------------------------------------------
 
-    def detect_credentials(self):
+    def detect_specific_options(self) -> None:
+        """Detect specific option updates from command output."""
+        if self.service.name not in options_match:
+            return
+
+        svc_map = options_match[self.service.name]
+        if self.tool_name not in svc_map:
+            return
+
+        p = svc_map[self.tool_name]
+
+        for pattern, spec in p.items():
+            logger.debug(f"Search for option pattern: {{pattern}}")
+
+            try:
+                compiled = self._compile_pattern(pattern, flags=re.IGNORECASE | re.MULTILINE, engine="re")
+                if not compiled:
+                    continue
+                m = compiled.search(self.cmd_output)
+            except (re.error, regex.error) as e:
+                logger.warning(f"Error with matchstring [{pattern}], you should review it. Exception: {e}")
+                break
+
+            if not m:
+                continue
+
+            logger.debug("Option pattern matches")
+            if "name" not in spec:
+                logger.smarterror(
+                    f'Invalid matchstring for service={{self.service.name}}, tool={{self.tool_name}}: Missing "name" key'
+                )
+                continue
+
+            name = self.__replace_tokens_from_matchobj(spec["name"], m)
+            if name is None:
+                continue
+
+            if "value" not in spec:
+                logger.smarterror(
+                    f'Invalid matchstring for service={{self.service.name}}, tool={{self.tool_name}}: Missing "value" key'
+                )
+                continue
+
+            value = self.__replace_tokens_from_matchobj(spec["value"], m)
+            if value is None:
+                continue
+
+            self.cu.add_option(name, value)
+
+    # ------------------------------------------------------------------------------------
+
+    def detect_products(self) -> None:
         """
-        Detect usernames/credentials from command output
-        Important: A command output might contain several usernames/passwords with the
-        same pattern.
-
-        Example method "search":
-
-        >>> text = "
-        ... Prefix
-        ... Found credentials: 
-        ...     admin:pass
-        ...     toto:pwd
-        ... lorem ipsum
-        ... lorem ipsum"
-        >>> import regex
-        >>> m = regex.search('Pre[\s\S]*?Found credentials:(\s*(?P<m1>\S+):(?P<m2>\S+)\s*\n)+', text)
-        >>> matchs = m.capturesdict()
-        >>> matchs
-        {'m1': ['admin', 'toto'], 'm2': ['pass', 'pwd']}
-
-        >>> m = regex.search('(\[v\] Trying Credentials:\s*(?P<user>\S+)\s*(?P<password>\S+)\s*\n)+', text)
-        >>> m.capturesdict()
-        {'user': ['Miniwick', 'Miniwick', 'Miniwick', 'Miniwick', 'Miniwick'], 'password': ['password', 'admin', '123456', 'Password1', 'Miniwick']}
-        >>> m = regex.search('WordPress[\s\S]*?(\[v\] Trying Credentials:\s*(?P<user>\S+)\s*(?P<password>\S+)\s*\n)+', text)
-        >>> m.capturesdict()
-        {'user': ['Miniwick', 'Miniwick', 'Miniwick', 'Miniwick', 'Miniwick'], 'password': ['password', 'admin', '123456', 'Password1', 'Miniwick']}
-
+        Detect product from command output.
+        For a given tool/product, first successful match stops further checks for that product type.
         """
-        if self.service.name in creds_match.keys():
+        if self.service.name not in products_match:
+            return
 
-            if self.tool_name in creds_match[self.service.name].keys():
-                p = creds_match[self.service.name][self.tool_name]
+        for prodtype, proddict in products_match[self.service.name].items():
+            break_prodnames = False
 
-                for pattern in p.keys():
+            for prodname, prodinfo in proddict.items():
+                if self.tool_name not in prodinfo:
+                    continue
 
-                    # Important: Multiple search/match
-                    #m = re.search(pattern, self.cmd_output, re.IGNORECASE|re.DOTALL)
-                    logger.debug('Search for creds pattern: {pattern}'.format(
-                        pattern=pattern))
+                patterns = prodinfo[self.tool_name]
+                if isinstance(patterns, str):
+                    patterns = [patterns]
 
-                    if 'user' not in p[pattern]:
-                        logger.smarterror('Invalid matchstring for service={service}, '
-                                          ' tool={tool}: Missing "user" key'.format(
-                                              service=self.service.name,
-                                              tool=self.tool_name))
-                        continue
+                for pattern in patterns:
+                    version_detection = "[VERSION]" in pattern
+                    pattern_re = pattern.replace("[VERSION]", VERSION_REGEXP)
+                    logger.debug(f"Search for products pattern: {{pattern_re}}")
 
-                    # Matching method
-                    if 'meth' in p[pattern] \
-                            and p[pattern]['meth'] in ('finditer', 'search'):
-                        method = p[pattern]['meth']
-                    else:
-                        method = 'finditer'
-
-                    # Perform regexp matching
                     try:
-                        if method == 'finditer':
-                            m = re.finditer(pattern,
-                                            self.cmd_output,
-                                            re.IGNORECASE | re.MULTILINE)
-                        else:
-                            m = regex.search(pattern,
-                                             self.cmd_output,
-                                             regex.IGNORECASE)
-                    except Exception as e:
-                        logger.warning('Error with matchstring [{pattern}], you should '
-                                       'review it. Exception: {exception}'.format(
-                                           pattern=pattern, exception=e))
+                        compiled = self._compile_pattern(pattern_re, flags=re.IGNORECASE | re.MULTILINE, engine="re")
+                        if not compiled:
+                            continue
+                        m = compiled.search(self.cmd_output)
+                    except (re.error, regex.error) as e:
+                        logger.warning(
+                            f"Error with matchstring [{pattern_re}], you should review it. Exception: {e}"
+                        )
                         break
 
                     if not m:
                         continue
 
-                    pattern_match = False
+                    logger.debug("Product pattern matches")
+                    version = ""
+                    if version_detection:
+                        try:
+                            version = m.group("version") or ""
+                            logger.debug(f"Version detected: {{version}}")
+                        except (IndexError, KeyError):
+                            version = ""
 
-                    # Method "finditer"
-                    if method == 'finditer':
-                        for match in m:
-                            pattern_match = True
-                            cred = {}
+                    self.cu.add_product(prodtype, prodname, version)
 
-                            # Replace tokens in user, pass, type
-                            cred['user'] = self.__replace_tokens_from_matchobj(
-                                p[pattern]['user'], match)
-                            if cred['user'] is None:
-                                continue
-
-                            if 'pass' in p[pattern]:
-                                cred['pass'] = self.__replace_tokens_from_matchobj(
-                                    p[pattern]['pass'], match)
-                                if cred['pass'] is None:
-                                    continue
-
-                            if 'type' in p[pattern]:
-                                cred['type'] = self.__replace_tokens_from_matchobj(
-                                    p[pattern]['type'], match)
-                                if cred['type'] is None:
-                                    continue
-
-                            # Add username/cred to context
-                            if 'pass' in cred:
-                                self.cu.add_credentials(
-                                    username=cred.get('user'),
-                                    password=cred.get('pass'),
-                                    auth_type=cred.get('type'))
-                            elif 'user' in cred:
-                                self.cu.add_username(
-                                    username=cred.get('user'),
-                                    auth_type=cred.get('type'))
-
-                    # Method "search"
-                    else:
-                        pattern_match = True
-                        matchs = m.capturesdict()
-                        if 'm1' not in matchs:
-                            logger.smarterror('Invalid matchstring for '
-                                              'service={service}, tool={tool}: Missing match '
-                                              'group'.format(
-                                                  service=self.service.name,
-                                                  tool=self.tool_name))
-                            return
-
-                        nb_groups = len(matchs['m1'])
-
-                        for i in range(nb_groups):
-                            cred = {}
-
-                            # Replace tokens in user, pass, type
-                            cred['user'] = self.__replace_tokens_from_captdict(
-                                p[pattern]['user'], matchs, i)
-                            if cred['user'] is None:
-                                continue
-
-                            if 'pass' in p[pattern]:
-                                cred['pass'] = self.__replace_tokens_from_captdict(
-                                    p[pattern]['pass'], matchs, i)
-                                if cred['pass'] is None:
-                                    continue
-
-                            if 'type' in p[pattern]:
-                                cred['type'] = self.__replace_tokens_from_captdict(
-                                    p[pattern]['type'], matchs, i)
-                                if cred['type'] is None:
-                                    continue
-
-                            # Add username/cred to context
-                            if 'pass' in cred:
-                                self.cu.add_credentials(
-                                    username=cred.get('user'),
-                                    password=cred.get('pass'),
-                                    auth_type=cred.get('type'))
-                            elif 'user' in cred:
-                                self.cu.add_username(
-                                    username=cred.get('user'),
-                                    auth_type=cred.get('type'))
-
-                    # If a pattern has matched, skip the next patterns
-                    if pattern_match:
-                        logger.debug('Creds pattern matches (user only)')
-                        return
-
-    # ------------------------------------------------------------------------------------
-
-    def detect_specific_options(self):
-        """Detect specific option update from command output"""
-        if self.service.name in options_match.keys():
-
-            if self.tool_name in options_match[self.service.name].keys():
-                p = options_match[self.service.name][self.tool_name]
-
-                for pattern in p.keys():
-                    logger.debug('Search for option pattern: {pattern}'.format(
-                        pattern=pattern))
-
-                    try:
-                        m = re.search(pattern,
-                                      self.cmd_output,
-                                      re.IGNORECASE | re.MULTILINE)
-                    except Exception as e:
-                        logger.warning('Error with matchstring [{pattern}], you should '
-                                       'review it. Exception: {exception}'.format(
-                                           pattern=pattern, exception=e))
+                    # Found a product name for this product type; stop checking other product names
+                    break_prodnames = True
+                    if version != "":
+                        # If version is found we can stop checking patterns for this prodname group
                         break
 
-                    # If pattern matches cmd output, update specific option
-                    if m:
-                        logger.debug('Option pattern matches')
-                        if 'name' in p[pattern]:
-                            name = self.__replace_tokens_from_matchobj(
-                                p[pattern]['name'], m)
-                            if name is None:
-                                continue
-                        else:
-                            logger.smarterror('Invalid matchstring for '
-                                              'service={service}, tool={tool}: Missing '
-                                              '"name" key'.format(
-                                                  service=self.service.name,
-                                                  tool=self.tool_name))
-                            continue
-
-                        if 'value' in p[pattern]:
-                            value = self.__replace_tokens_from_matchobj(
-                                p[pattern]['value'], m)
-                            if value is None:
-                                continue
-                        else:
-                            logger.smarterror('Invalid matchstring for '
-                                              'service={service}, tool={tool}: Missing '
-                                              '"value" key'.format(
-                                                  service=self.service.name,
-                                                  tool=self.tool_name))
-                            continue
-
-                        # Add specific option to context
-                        self.cu.add_option(name, value)
+                if break_prodnames:
+                    break
 
     # ------------------------------------------------------------------------------------
 
-    def detect_products(self):
+    def detect_vulns(self) -> None:
         """
-        Detect product from command output
-
-        For a given tool, and for a given product, if there are several matchstrings
-        defined, their order is important because it stops after the first match.
+        Detect vulnerabilities from command output. Multiple occurrences are supported.
         """
-        if self.service.name in products_match.keys():
+        if self.service.name not in vulns_match:
+            return
 
-            for prodtype in products_match[self.service.name].keys():
-                p = products_match[self.service.name][prodtype]
-                break_prodnames = False
+        svc_map = vulns_match[self.service.name]
+        if self.tool_name not in svc_map:
+            return
 
-                for prodname in p.keys():
+        p = svc_map[self.tool_name]
 
-                    if self.tool_name in p[prodname].keys():
-                        patterns = p[prodname][self.tool_name]
+        for pattern, spec in p.items():
+            logger.debug(f"Search for vulns pattern: {{pattern}}")
 
-                        # List of patterns is supported (i.e. several different
-                        # patterns for a given tool)
-                        if type(patterns) == str:
-                            patterns = [patterns]
+            try:
+                compiled = self._compile_pattern(pattern, flags=re.IGNORECASE | re.MULTILINE, engine="re")
+                if not compiled:
+                    continue
+                mall = compiled.finditer(self.cmd_output)
+            except (re.error, regex.error) as e:
+                logger.warning(f"Error with matchstring [{pattern}], you should review it. Exception: {e}")
+                break
 
-                        for pattern in patterns:
-                            version_detection = '[VERSION]' in pattern
-                            pattern = pattern.replace(
-                                '[VERSION]', VERSION_REGEXP)
+            if not mall:
+                continue
 
-                            logger.debug('Search for products pattern: {pattern}'.format(
-                                pattern=pattern))
-
-                            try:
-                                m = re.search(pattern,
-                                              self.cmd_output,
-                                              re.IGNORECASE | re.MULTILINE)
-                            except Exception as e:
-                                logger.warning('Error with matchstring [{pattern}], '
-                                               'you should review it. Exception: '
-                                               '{exception}'.format(
-                                                   pattern=pattern, exception=e))
-                                break
-
-                            # If pattern matches cmd output, add detected product
-                            # Note: For a given product type, only one name(+version)
-                            # can be added.
-                            if m:
-                                logger.debug('Product pattern matches')
-                                # Add version if present
-                                if version_detection:
-                                    try:
-                                        if m.group('version') is not None:
-                                            version = m.group('version')
-                                            logger.debug('Version detected: {version}'.format(
-                                                version=version))
-                                        else:
-                                            version = ''
-                                    except:
-                                        version = ''
-                                else:
-                                    version = ''
-
-                                # Add detected product to context
-                                self.cu.add_product(
-                                    prodtype, prodname, version)
-
-                                # Move to next product type because only one name
-                                # (potentially with version) is supported per type.
-                                # If name not found yet, give a try to next pattern
-                                break_prodnames = True
-                                if version != '':
-                                    break
-
-                        if break_prodnames:
-                            break
+            for m in mall:
+                name = self.__replace_tokens_from_matchobj(spec, m)
+                if name is None:
+                    continue
+                logger.debug("Vuln pattern matches")
+                self.cu.add_vuln(StringUtils.remove_non_printable_chars(name))
 
     # ------------------------------------------------------------------------------------
 
-    def detect_vulns(self):
+    def detect_os(self) -> None:
         """
-        Detect vulnerability from command output
-        Important: A command output might contain several vulnerabilities with the 
-        same pattern.
+        Detect operating system from command output.
         """
-        if self.service.name in vulns_match.keys():
+        for os_name, patterns_map in os_match.items():
+            if self.tool_name not in patterns_map:
+                continue
 
-            if self.tool_name in vulns_match[self.service.name].keys():
-                p = vulns_match[self.service.name][self.tool_name]
+            patterns = patterns_map[self.tool_name]
+            if isinstance(patterns, str):
+                patterns = [patterns]
 
-                for pattern in p.keys():
+            for pattern in patterns:
+                logger.debug(f"Search for os pattern: {{pattern}}")
+                try:
+                    compiled = self._compile_pattern(pattern, flags=re.IGNORECASE, engine="re")
+                    if not compiled:
+                        continue
+                    m = compiled.search(self.cmd_output)
+                except (re.error, regex.error) as e:
+                    logger.warning(f"Error with matchstring [{pattern}], you should review it. Exception: {e}")
+                    break
 
-                    logger.debug('Search for vulns pattern: {pattern}'.format(
-                        pattern=pattern))
-
-                    # Important: Multiple search/match
-                    #m = re.search(pattern, self.cmd_output, re.IGNORECASE)
-                    try:
-                        mall = re.finditer(pattern,
-                                           self.cmd_output,
-                                           re.IGNORECASE | re.MULTILINE)
-                    except Exception as e:
-                        logger.warning('Error with matchstring [{pattern}], you '
-                                       'should review it. Exception: {exception}'.format(
-                                           pattern=pattern, exception=e))
-                        break
-
-                    # Process each match
-                    if mall:
-                        for m in mall:
-                            name = self.__replace_tokens_from_matchobj(
-                                p[pattern], m)
-                            if name is None:
-                                continue
-
-                            # Add vulnerability to context
-                            logger.debug('Vuln pattern matches')
-                            self.cu.add_vuln(
-                                StringUtils.remove_non_printable_chars(name))
-
-    # ------------------------------------------------------------------------------------
-
-    def detect_os(self):
-        """
-        Detect product from command output
-        """
-        for os in os_match.keys():
-            if self.tool_name in os_match[os].keys():
-                patterns = os_match[os][self.tool_name]
-
-                if type(patterns) == str:
-                    patterns = [patterns]
-
-                for pattern in patterns:
-                    logger.debug('Search for os pattern: {pattern}'.format(
-                        pattern=pattern))
-
-                    try:
-                        m = re.search(pattern, self.cmd_output, re.IGNORECASE)
-                    except Exception as e:
-                        logger.warning('Error with matchstring [{pattern}], '
-                                       'you should review it. Exception: {exc}'.format(
-                                           pattern=pattern, exc=e))
-                        break
-
-                    # If pattern matches, add detected OS
-                    if m:
-                        logger.debug('OS pattern matches')
-
-                        # Add detected OS to the context
-                        self.cu.add_os(os)
-                        return
-
-    # ------------------------------------------------------------------------------------
-
-    def __replace_tokens_from_matchobj(self, string, match):
-        """
-        Replace tokens $1, $2 ... with the corresponding value of matching group.
-        E.g. : $1 <-> (?P<m1>...)
-        This method is used when the matching method "finditer" is used (default)
-
-        :param str string: String that may contain some tokens ($1, $2 ...)
-        :param _sre.SRE_Match match: Match object resulting from re.search()
-        :return: String with tokens replaced with correct values (or None in case of
-            error)
-        :rtype: str|None
-        """
-        output = string
-        for i in range(1, 10):
-            token = '${}'.format(i)
-            if token in string:
-                group = 'm{}'.format(i)
-
-                if group in match.groupdict():
-                    # Replace token by value of matching group
-                    # If value is None, replace by empty string
-                    output = output.replace(token, match.group(group) or '')
-
-                else:
-                    logger.smarterror('Invalid matchstring for service={service}, '
-                                      'tool={tool}'.format(
-                                          service=self.service.name,
-                                          tool=self.tool_name))
-                    return None
-
-            # else:
-            #     # Token must be sequentials ($1, $2...)
-            #     break
-
-        return output
-
-    def __replace_tokens_from_captdict(self, string, captdict, index):
-        """
-        Replace tokens $1, $2 ... with the corresponding value of matching group.
-        E.g. : $1 <-> (?P<m1>...)
-        This method is used when the matching method "search" is used
-
-        :param str string: String that may contain some tokens ($1, $2 ...)
-        :param dict captdict: Captures dict resulting from regex.search().capturesdict()
-        :return: String with tokens replaced with correct values (or None in case of
-            error)
-        :rtype: str|None
-        """
-        output = string
-        for i in range(1, 10):
-            token = '${}'.format(i)
-            if token in string:
-                group = 'm{}'.format(i)
-
-                if group in captdict and index < len(captdict[group]):
-                    output = output.replace(token, captdict[group][index])
-                else:
-                    logger.smarterror('Invalid matchstring for service={service}, '
-                                      'tool={tool}'.format(
-                                          service=self.service.name,
-                                          tool=self.tool_name))
-                    return None
-
-            # else:
-            #     # Token must be sequentials ($1, $2...)
-            #     break
-
-        return output
+                if m:
+                    logger.debug("OS pattern matches")
+                    self.cu.add_os(os_name)
+                    return
+        
