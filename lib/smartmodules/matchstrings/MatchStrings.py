@@ -1,5 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+from lib.smartmodules.matchstrings.registry import (
+    VERSION_REGEXP,
+    creds_match,
+    options_match,
+    os_match,
+    products_match,
+    vulns_match,
+)
+
+
+# ----------------------------------------------------------------------------------------
+# Credentials
+#
+# Sample:
+# creds_match['http'] = {
+#     'tool-name': {
+#         'found creds: (?P<m1>\S*):(?P<m2>\S*)': {
+#             'user': '$1',
+#             'pass': '$2',
+#             'type': 'wordpress'
+#         },
+#         'found user: (?P<m1>\S*)': {
+#             'user': '$1'
+#         }
+#     }
+# }
+
 from lib.smartmodules.matchstrings.os.OS import *
 from lib.smartmodules.matchstrings.vulns.SshVulns import *
 from lib.smartmodules.matchstrings.vulns.SmtpVulns import *
@@ -49,95 +77,3 @@ from lib.smartmodules.matchstrings.creds.JavaRmiCreds import *
 from lib.smartmodules.matchstrings.creds.HttpCreds import *
 from lib.smartmodules.matchstrings.creds.FtpCreds import *
 from lib.smartmodules.matchstrings.creds.AjpCreds import *
-from collections import defaultdict
-
-VERSION_REGEXP = '(?P<version>[0-9.]*[0-9])?'
-
-# ----------------------------------------------------------------------------------------
-# Credentials
-#
-# Sample:
-# creds_match['http'] = {
-#     'tool-name': {
-#         'found creds: (?P<m1>\S*):(?P<m2>\S*)': {
-#             'user': '$1',
-#             'pass': '$2',
-#             'type': 'wordpress'
-#         },
-#         'found user: (?P<m1>\S*)': {
-#             'user': '$1'
-#         }
-#     }
-# }
-
-creds_match = {}
-
-
-# ----------------------------------------------------------------------------------------
-# Specific Options
-#
-# Sample:
-# options_match['http'] = {
-#   'tool-name': {
-#       'match string (?P<m1>\S+) lorem ispum': {
-#           'name': 'option-name',
-#           'value': 'option-value-$1'
-#       }
-#   }
-# }
-
-options_match = {}
-
-
-# ----------------------------------------------------------------------------------------
-# Products
-#
-# Sample:
-# products_match['http']['web-server'] = {
-#     'product-name': {
-#         'tool-name1': 'lorem ipsum (version: [VERSION])?',
-#         'tool-name2': 'lorem ipsum',
-#     }
-# }
-#
-# For a given product-name, and a given tool-name, it is also possible to specify
-# several matchstrings using list as follows:
-#     'Apache/Tomcat' : {
-#         'clusterd': [
-#             'Matched [0-9]+ fingerprints for service tomcat',
-#             'Tomcat (Manager|Admin)? \(version [VERSION]',
-#          ],
-#      }
-
-products_match = defaultdict(dict)
-
-
-# ----------------------------------------------------------------------------------------
-# Vulnerabilities
-#
-# Sample:
-# vulns_match['http'] = {
-#     'tool-name': {
-#         'match string (?P<m1>\S+) lorem ispum': 'MS17-010: $1',
-#     }
-# }
-
-vulns_match = {}
-
-
-# ----------------------------------------------------------------------------------------
-# OS
-#
-# Sample:
-# os_match = {
-#     'Windows': {
-#		  'banner': [
-#		       'microsoft',
-#              'windows',
-#          ],
-#          'wappalyzer': [
-# 		       'Windows',
-# 		   ],
-#     }
-# }
-os_match = {}

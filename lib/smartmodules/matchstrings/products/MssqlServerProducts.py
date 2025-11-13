@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import products_match
+from lib.smartmodules.matchstrings.registry import products_match
 
 # We consider as version only the year, e.g. 2012, 2014...
 # The exact version number (e.g. 12.00.2000) is not taken into account

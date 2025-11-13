@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import products_match
+from lib.smartmodules.matchstrings.registry import products_match
 
 # List of most common web servers: https://en.wikipedia.org/wiki/Comparison_of_web_server_software
 

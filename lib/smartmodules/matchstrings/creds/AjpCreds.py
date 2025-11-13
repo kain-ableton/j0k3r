@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from lib.smartmodules.matchstrings.MatchStrings import creds_match
+from lib.smartmodules.matchstrings.registry import creds_match
 
 
 creds_match['ajp'] = {
