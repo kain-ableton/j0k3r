@@ -91,6 +91,9 @@ products_match['http']['web-appserver'] = {
             'WebLogic Admin Console (\(https\))?\s*\(version Any\)',
         ],
     },
+    'OpenNMS': {
+        'whatweb': '(?i)OpenNMS',
+    },
     'Railo': {
         'clusterd': [
             'Matched [0-9]+ fingerprints for service railo',

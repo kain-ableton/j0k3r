@@ -21,6 +21,7 @@ products_match['http']['web-server'] = {
             WIG_REGEXP.format('Apache'),
             WIG_REGEXP2.format('Apache'),
         ],
+        'whatweb': '(?i)HTTPServer\\[Apache(/[VERSION])?\\]',
     },
     'Hiawatha': {
         'wappalyzer': 'Hiawatha',
@@ -33,10 +34,12 @@ products_match['http']['web-server'] = {
     'Lighttpd': {
         'wappalyzer': 'lighttpd',
         'banner': 'lighttpd(\s*[VERSION])?',
+        'whatweb': '(?i)HTTPServer\\[lighttpd(/[VERSION])?\\]',
     },
     'LiteSpeed Web Server': {
         'wappalyzer': 'LiteSpeed',
         'banner': 'LiteSpeed httpd(\s+[VERSION])?',
+        'whatweb': '(?i)HTTPServer\\[LiteSpeed(/[VERSION])?\\]',
     },
     'Microsoft/IIS': {
         'wappalyzer': 'IIS',
@@ -45,6 +48,7 @@ products_match['http']['web-server'] = {
             WIG_REGEXP.format('IIS'),
             WIG_REGEXP2.format('IIS'),
         ],
+        'whatweb': '(?i)HTTPServer\\[Microsoft-IIS(/[VERSION])?\\]',
     },
     'Mongoose': {
         'banner': 'Mongoose httpd(\s*[VERSION])?',
@@ -60,10 +64,12 @@ products_match['http']['web-server'] = {
             WIG_REGEXP.format('nginx'),
             WIG_REGEXP2.format('nginx'),
         ],
+        'whatweb': '(?i)HTTPServer\\[nginx(/[VERSION])?\\]',
     },
     'Oracle/Http Server': {
         'wappalyzer': 'Oracle HTTP Server',
         'banner': 'Oracle HTTP Server(\s*(9iAS httpd|Powered by Apache))?(.+\(version [VERSION]\))?',
+        'whatweb': '(?i)HTTPServer\\[Oracle\s*HTTP\s*Server(/[VERSION])?\\]',
     },
     'Rejetto/Http File Server': {
         'banner': 'HttpFileServer httpd(\s*[VERSION])?',

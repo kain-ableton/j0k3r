@@ -38,6 +38,9 @@ class AttackController(Controller):
             categories = [
                 cat for cat in categories if cat not in args.cat_exclude]
 
+        # Persist session if requested once arguments have been normalized.
+        self.arguments.maybe_save_attack_session()
+
         # Create the attack scope
         self.attack_scope = AttackScope(
             self.settings,
