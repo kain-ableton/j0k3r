@@ -565,10 +565,18 @@ class ArgumentsParser:
                         if action.dest}
         data = {}
 
+        skipped = []
+
         for key in allowed_keys:
             if key in ('save_session', 'load_session'):
                 continue
-            data[key] = getattr(self.args, key, None)
+
+            value = getattr(self.args, key, None)
+            if not self._is_json_serializable(value):
+                skipped.append(key)
+                continue
+
+            data[key] = value
 
         try:
             with open(session_path, 'w') as handler:
@@ -578,8 +586,23 @@ class ArgumentsParser:
                 file=session_path, err=exc))
             raise ArgumentsException()
 
+        if skipped:
+            logger.warning('Skipping non-serializable arguments while saving '
+                           'session: {items}'.format(items=', '.join(skipped)))
+
         logger.success('Attack session saved to {file}'.format(
             file=session_path))
+
+    @staticmethod
+    def _is_json_serializable(value):
+        """Return True if *value* can be JSON serialized."""
+
+        try:
+            json.dumps(value)
+        except TypeError:
+            return False
+
+        return True
 
     @staticmethod
     def __normalize_csv_list(value):
