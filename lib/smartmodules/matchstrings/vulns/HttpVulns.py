@@ -116,8 +116,14 @@ vulns_match['http'] = {
     'vulnx': {
         '\[\?\]\s*(?P<m1>.+?)\s+VULN': 'Vulnerable component: $1',
     },
+    'vbscan': {
+        '\[\+\]\s*(?P<m1>[^\[]+?)\s*\[Vulnerable\]': 'WordPress: $1',
+    },
     'wpscan': {
         '\[!\] Title: (?P<m1>.*)': 'Wordpress: $1',
+    },
+    'wpseku': {
+        '\[\+\]\s*(?P<m1>[^\[]+?)\s*\[Vulnerable\]': 'WordPress: $1',
     },
 
 }
