@@ -62,7 +62,8 @@ class Wappalyzer(requests.Session):
 
         self.headers['User-Agent'] = 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) ' \
             'Chrome/65.0.3325.181'
-        self.db = json.load(open(file, encoding='utf-8'))
+        with open(file, encoding='utf-8') as f:
+            self.db = json.load(f)
         self.apps = self.db['apps']
         self.jsPatterns = self.parseJsPatterns()
         self.url = url

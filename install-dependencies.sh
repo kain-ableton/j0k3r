@@ -475,7 +475,7 @@ for lib in $LIBPY3; do
     if ! echo "$PIP3FREEZE" | grep -iq "$lib"; then
         echo
         print_blue "[~] Install Python library ${lib} (py3)"
-        "${VENV_PIP}" install $lib
+        "${VENV_PIP}" install "$lib"
     fi
 done
 
@@ -564,10 +564,10 @@ print_delimiter
 if ! command -v java >/dev/null 2>&1; then
     print_blue "[~] Install Java"
     apt-get install -y default-jdk
-    if command -v jython >/dev/null 2>&1; then
+    if command -v java >/dev/null 2>&1; then
         print_green "[+] Java installed successfully"
     else
-        print_red "[!] An error occured during Java install"
+        print_red "[!] An error occurred during Java install"
         exit 1
     fi   
 else
