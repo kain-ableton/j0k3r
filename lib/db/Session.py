@@ -8,7 +8,11 @@ import sqlalchemy.orm
 from contextlib import contextmanager
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import declarative_base
+
+try:  # SQLAlchemy >= 1.4
+    from sqlalchemy.orm import declarative_base
+except ImportError:  # SQLAlchemy 1.2–1.3
+    from sqlalchemy.ext.declarative import declarative_base
 
 from lib.core.Config import *
 
