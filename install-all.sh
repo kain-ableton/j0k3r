@@ -17,8 +17,10 @@ print_success() {
     echo "${BOLD_GREEN}$1${NORMAL}"
 }
 
-print_error() {
-    echo "${BOLD_RED}$1${NORMAL}" >&2
+print_red() {
+    BOLD_RED=$(tput bold ; tput setaf 1)
+    NORMAL=$(tput sgr0)
+    echo "${BOLD_RED}$1${NORMAL}"
 }
 
 print_warning() {

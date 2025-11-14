@@ -43,7 +43,7 @@ class FileUtils:
         try:
             with open(filename, 'w') as fd:
                 fd.write(content)
-        except:
+        except (IOError, OSError):
             return False
 
         return True
@@ -111,7 +111,7 @@ class FileUtils:
     def absolute_path(relative_path):
         try:
             return os.path.abspath(relative_path)
-        except:
+        except (TypeError, AttributeError):
             return None
 
     @staticmethod

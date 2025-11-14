@@ -90,7 +90,7 @@ if __name__ == '__main__':
         settings_bak = Settings()
     except Exception as e:
         logger.error(
-            'An error occured when saving current settings: {}'.format(e))
+            'An error occurred when saving current settings: {}'.format(e))
         sys.exit(1)
     logger.success('Current settings saved')
 
@@ -103,7 +103,7 @@ if __name__ == '__main__':
         gitoutput = g.pull()
     except Exception as e:
         logger.error(
-            'An error occured while performing "git pull": {}'.format(e))
+            'An error occurred while performing "git pull": {}'.format(e))
         sys.exit(1)
     logger.info('git pull output:')
     print(gitoutput)
@@ -120,7 +120,7 @@ if __name__ == '__main__':
             'install-dependencies.sh has been updated. Will re-run it...')
         returncode, _ = ProcessLauncher('./install-dependencies.sh').start()
         if returncode != 0:
-            logger.error('An error occured during execution of '
+            logger.error('An error occurred during execution of '
                          'install-dependencies.sh (exitcode = {})'.format(returncode))
             sys.exit(1)
         else:
@@ -136,7 +136,7 @@ if __name__ == '__main__':
         returncode, _ = ProcessLauncher(
             '"{}" install -r requirements.txt'.format(pip_cmd)).start()
         if returncode != 0:
-            logger.error('An error occured during execution of "{} install '
+            logger.error('An error occurred during execution of "{} install '
                          '-r requirements.txt" (exitcode = {})'.format(pip_cmd, returncode))
             sys.exit(1)
         else:
@@ -160,7 +160,7 @@ if __name__ == '__main__':
             settings_new = Settings()
         except Exception as e:
             logger.error(
-                'An error occured when loading new settings: {}'.format(e))
+                'An error occurred when loading new settings: {}'.format(e))
             sys.exit(1)
 
         diff = settings_bak.toolbox.compare_with_new(settings_new.toolbox)
@@ -198,7 +198,7 @@ if __name__ == '__main__':
             logger.info('Install newly added tools...')
             for tool in diff['new']:
                 if not settings_new.toolbox.install_tool(tool, fast_mode=True):
-                    logger.error('An error occured during tool "{}" install. '
+                    logger.error('An error occurred during tool "{}" install. '
                                  'Exit'.format(tool))
                     sys.exit(1)
 
@@ -207,7 +207,7 @@ if __name__ == '__main__':
             for tool in diff['updated']:
                 settings_new.toolbox.remove_tool(tool)
                 if not settings_new.toolbox.install_tool(tool, fast_mode=True):
-                    logger.error('An error occured during tool "{}" re-install. '
+                    logger.error('An error occurred during tool "{}" re-install. '
                                  'Exit'.format(tool))
                     sys.exit(1)
 
