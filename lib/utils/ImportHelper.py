@@ -70,7 +70,7 @@ Specific Jok3r Conventions:
 3. Local Imports:
    - Always use absolute imports starting with 'lib.'
    - Config and Constants often imported with wildcard: from lib.core.Config import *
-   - Logger should be imported last in the local section
+   - Imports should be alphabetically sorted within the local section
    - Database models: from lib.db.Model import Model
    - Utils: from lib.utils.UtilName import UtilName
    - Output: from lib.output.Logger import logger

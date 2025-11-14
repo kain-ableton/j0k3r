@@ -111,6 +111,12 @@ def configure_logger():
     Returns:
         logging.Logger: Configured logger instance with custom levels
     """
+    logger = colorlog.getLogger()
+    
+    # Clear any existing handlers to avoid duplicates
+    if logger.handlers:
+        logger.handlers.clear()
+    
     handler = colorlog.StreamHandler()
     
     formatter = colorlog.ColoredFormatter(
@@ -122,8 +128,6 @@ def configure_logger():
         style='%'
     )
     handler.setFormatter(formatter)
-    
-    logger = colorlog.getLogger()
     
     # Add custom levels to the logging module
     # https://gist.github.com/hit9/5635505
@@ -170,10 +174,19 @@ def get_logger():
     """
     Get the configured application logger instance.
     
+    If the logger hasn't been configured yet, this returns the root logger.
+    For a properly configured logger, use configure_logger() first or import
+    the logger from lib.output.Logger.
+    
     Returns:
-        logging.Logger: The configured logger instance
+        logging.Logger: The logger instance
     """
-    return logging.getLogger()
+    logger = logging.getLogger()
+    # Check if logger has been configured (has handlers)
+    if not logger.handlers:
+        # Return unconfigured logger - caller should configure it
+        pass
+    return logger
 
 
 def set_log_level(level):

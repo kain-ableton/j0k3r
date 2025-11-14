@@ -2,27 +2,26 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Color definitions
+BOLD_BLUE=$(tput bold ; tput setaf 4)
+BOLD_GREEN=$(tput bold ; tput setaf 2)
+BOLD_RED=$(tput bold ; tput setaf 1)
+BOLD_YELLOW=$(tput bold ; tput setaf 3)
+NORMAL=$(tput sgr0)
+
 print_info() {
-    BOLD_BLUE=$(tput bold ; tput setaf 4)
-    NORMAL=$(tput sgr0)
     echo "${BOLD_BLUE}$1${NORMAL}"
 }
 
 print_success() {
-    BOLD_GREEN=$(tput bold ; tput setaf 2)
-    NORMAL=$(tput sgr0)
     echo "${BOLD_GREEN}$1${NORMAL}"
 }
 
 print_error() {
-    BOLD_RED=$(tput bold ; tput setaf 1)
-    NORMAL=$(tput sgr0)
     echo "${BOLD_RED}$1${NORMAL}" >&2
 }
 
 print_warning() {
-    BOLD_YELLOW=$(tput bold ; tput setaf 3)
-    NORMAL=$(tput sgr0)
     echo "${BOLD_YELLOW}$1${NORMAL}"
 }
 

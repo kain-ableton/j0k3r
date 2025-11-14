@@ -2,27 +2,26 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Color definitions
+BOLD_BLUE=$(tput bold ; tput setaf 4)
+BOLD_GREEN=$(tput bold ; tput setaf 2)
+BOLD_RED=$(tput bold ; tput setaf 1)
+BOLD_YELLOW=$(tput bold ; tput setaf 3)
+NORMAL=$(tput sgr0)
+
 print_info() {
-    BOLD_BLUE=$(tput bold ; tput setaf 4)
-    NORMAL=$(tput sgr0)
     echo "${BOLD_BLUE}$1${NORMAL}"
 }
 
 print_success() {
-    BOLD_GREEN=$(tput bold ; tput setaf 2)
-    NORMAL=$(tput sgr0)
     echo "${BOLD_GREEN}$1${NORMAL}"
 }
 
 print_error() {
-    BOLD_RED=$(tput bold ; tput setaf 1)
-    NORMAL=$(tput sgr0)
-    echo "${BOLD_RED}$1${NORMAL}"
+    echo "${BOLD_RED}$1${NORMAL}" >&2
 }
 
 print_warning() {
-    BOLD_YELLOW=$(tput bold ; tput setaf 3)
-    NORMAL=$(tput sgr0)
     echo "${BOLD_YELLOW}$1${NORMAL}"
 }
 
@@ -132,7 +131,7 @@ if ! grep -q "deb http://http.kali.org/kali kali-rolling main" /etc/apt/sources.
     if [ $? -eq 0 ]; then
         print_success "[+] Kali repository added with success"
     else
-        print_error "[!] Error occured while adding Kali repository"
+        print_error "[!] Error occurred while adding Kali repository"
         exit 1
     fi
 else
@@ -141,7 +140,7 @@ else
     if [ $? -eq 0 ]; then
         print_success "[+] Repositories updated with success"
     else
-        print_error "[!] Error occured while updating repositories"
+        print_error "[!] Error occurred while updating repositories"
         exit 1
     fi
 fi
@@ -156,7 +155,7 @@ if ! command -v git >/dev/null 2>&1; then
     if command -v git >/dev/null 2>&1; then
         print_success "[+] Git installed successfully"
     else
-        print_error "[!] An error occured during Git install"
+        print_error "[!] An error occurred during Git install"
         exit 1
     fi
 else
@@ -228,7 +227,7 @@ if ! command -v msfconsole >/dev/null 2>&1; then
     if command -v msfconsole >/dev/null 2>&1; then
         print_success "[+] Metasploit installed successfully"
     else
-        print_error "[!] An error occured during Metasploit install"
+        print_error "[!] An error occurred during Metasploit install"
         exit 1
     fi        
 else
@@ -245,7 +244,7 @@ if ! command -v nmap >/dev/null 2>&1; then
     if command -v nmap >/dev/null 2>&1; then
         print_success "[+] Nmap installed successfully"
     else
-        print_error "[!] An error occured during Nmap install"
+        print_error "[!] An error occurred during Nmap install"
         exit 1
     fi   
 else
@@ -262,7 +261,7 @@ if ! command -v tcpdump >/dev/null 2>&1; then
     if command -v tcpdump >/dev/null 2>&1; then
         print_success "[+] tcpdump installed successfully"
     else
-        print_error "[!] An error occured during tcpdump install"
+        print_error "[!] An error occurred during tcpdump install"
         exit 1
     fi   
 else
@@ -309,13 +308,13 @@ done
 if command -v python3 >/dev/null 2>&1; then
     print_success "[+] Python3 installed successfully"
 else
-    print_error "[!] An error occured during Python3 install"
+    print_error "[!] An error occurred during Python3 install"
     exit 1
 fi
 if command -v pip3 >/dev/null 2>&1; then
     print_success "[+] pip3 installed successfully"
 else
-    print_error "[!] An error occured during pip3 install"
+    print_error "[!] An error occurred during pip3 install"
     exit 1
 fi
 print_delimiter
@@ -490,7 +489,7 @@ if ! command -v jython >/dev/null 2>&1; then
     if command -v jython >/dev/null 2>&1; then
         print_success "[+] Jython installed successfully"
     else
-        print_error "[!] An error occured during Jython install"
+        print_error "[!] An error occurred during Jython install"
         exit 1
     fi   
 else
@@ -507,7 +506,7 @@ if ! command -v ruby >/dev/null 2>&1; then
     if command -v ruby >/dev/null 2>&1; then
         print_success "[+] Ruby installed successfully"
     else
-        print_error "[!] An error occured during Ruby install"
+        print_error "[!] An error occurred during Ruby install"
         exit 1
     fi   
 else
@@ -533,7 +532,7 @@ if ! command -v perl >/dev/null 2>&1; then
     if command -v perl >/dev/null 2>&1; then
         print_success "[+] Perl installed successfully"
     else
-        print_error "[!] An error occured during Perl install"
+        print_error "[!] An error occurred during Perl install"
         exit 1
     fi   
 else
@@ -550,7 +549,7 @@ if ! command -v php >/dev/null 2>&1; then
     if command -v php >/dev/null 2>&1; then
         print_success "[+] PHP installed successfully"
     else
-        print_error "[!] An error occured during PHP install"
+        print_error "[!] An error occurred during PHP install"
         exit 1
     fi   
 else
@@ -567,7 +566,7 @@ if ! command -v java >/dev/null 2>&1; then
     if command -v jython >/dev/null 2>&1; then
         print_success "[+] Java installed successfully"
     else
-        print_error "[!] An error occured during Java install"
+        print_error "[!] An error occurred during Java install"
         exit 1
     fi   
 else
@@ -584,7 +583,7 @@ if ! command -v firefox >/dev/null 2>&1; then
     if command -v firefox >/dev/null 2>&1; then
         print_success "[+] Firefox installed successfully"
     else
-        print_error "[!] An error occured during Firefox install"
+        print_error "[!] An error occurred during Firefox install"
         exit 1
     fi   
 else
@@ -601,7 +600,7 @@ if ! command -v geckodriver >/dev/null 2>&1; then
     if command -v geckodriver >/dev/null 2>&1; then
         print_success "[+] Geckodriver installed successfully"
     else
-        print_error "[!] An error occured during Geckodriver install"
+        print_error "[!] An error occurred during Geckodriver install"
         exit 1
     fi
 else
