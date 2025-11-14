@@ -3,15 +3,11 @@
 ###
 # Jok3r update
 ###
-# Standard library imports
+import git
 import os
 import sys
 from pathlib import Path
 
-# Third-party imports
-import git
-
-# Local imports
 from lib.core.Config import *
 from lib.core.ProcessLauncher import ProcessLauncher
 from lib.core.Settings import Settings
