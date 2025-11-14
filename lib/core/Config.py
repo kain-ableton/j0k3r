@@ -3,11 +3,15 @@
 ###
 ### Core > Config
 ###
-import colored
+# Standard library imports
 import os
 
-from lib.core.Constants import *
+# Third-party imports
+import colored
+
+# Local imports
 from lib._version import __version__
+from lib.core.Constants import *
 
 
 # ----------------------------------------------------------------------------------------
