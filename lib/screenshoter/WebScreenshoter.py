@@ -19,9 +19,9 @@ try:
     from selenium.common.exceptions import UnexpectedAlertPresentException
     from selenium.common.exceptions import WebDriverException
     from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-except:
+except ImportError as e:
     logger.error('Module "selenium" not found. Make sure to install all required '
-                 'dependencies')
+                 'dependencies: {}'.format(e))
     sys.exit(1)
 
 

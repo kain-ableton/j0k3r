@@ -24,7 +24,7 @@ class IPAddressType(types.TypeDecorator):
         if value:
             try:
                 ip = ipaddress.ip_address(value)
-            except:
+            except (ValueError, TypeError):
                 return None
             return int(ip)
         else:
@@ -34,7 +34,7 @@ class IPAddressType(types.TypeDecorator):
         if value:
             try:
                 ip = ipaddress.ip_address(value)
-            except:
+            except (ValueError, TypeError):
                 return None
             return str(ip)
         else:

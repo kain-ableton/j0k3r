@@ -28,10 +28,7 @@ class SmartPostcheck:
         self.tool_name = tool_name
         self.cmd_output = cmd_output
         self.cu = ContextUpdater(self.service)
-        self.processor = MatchstringsProcessor(self.service,
-                                               self.tool_name,
-                                               self.cmd_output,
-                                               self.cu)
+        self.processor = MatchstringsProcessor(self.service, [self.cmd_output])
 
     def run(self):
         """Run postcheck processing"""
@@ -41,4 +38,30 @@ class SmartPostcheck:
         self.processor.detect_specific_options()
         self.processor.detect_products()
         self.processor.detect_vulns()
+        self._apply_findings()
         self.cu.update()
+
+    def _apply_findings(self):
+        """Apply findings from MatchstringsProcessor to ContextUpdater"""
+        # Apply credentials
+        for cred in self.processor.found_creds:
+            username = cred.get('username', '')
+            password = cred.get('password', '')
+            cred_type = cred.get('type', 'credentials')
+            if username or password:
+                self.cu.add_credentials(username, password, cred_type)
+        
+        # Apply options
+        for option, patterns in self.processor.found_options.items():
+            if patterns:
+                self.cu.add_option(option, 'true')
+        
+        # Apply products
+        for product_type, patterns in self.processor.found_products.items():
+            if patterns:
+                self.cu.add_product(product_type, patterns[0], '')
+        
+        # Apply vulnerabilities
+        for vuln_name, patterns in self.processor.found_vulns.items():
+            if patterns:
+                self.cu.add_vuln(vuln_name)

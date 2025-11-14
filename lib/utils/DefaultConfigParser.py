@@ -77,7 +77,7 @@ class DefaultConfigParser(configparser.ConfigParser):
                 return [e.strip() for e in result_str.split(sep)]
             else:
                 return default
-        except:
+        except Exception:
             return default
 
     def safe_get_multi(self, section, option_basename, default=None):
@@ -104,7 +104,7 @@ class DefaultConfigParser(configparser.ConfigParser):
         if res:
             try:
                 return ast.literal_eval(res)
-            except:
+            except (ValueError, SyntaxError):
                 return default
         else:
             return default
@@ -114,6 +114,6 @@ class DefaultConfigParser(configparser.ConfigParser):
         try:
             configparser.ConfigParser.set(self, section, option, str(value))
             return True
-        except:
+        except (configparser.NoSectionError, configparser.NoOptionError, ValueError) as e:
             # traceback.print_exc()
             return False

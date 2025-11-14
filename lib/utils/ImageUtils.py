@@ -30,7 +30,7 @@ class ImageUtils:
             # Important: pointer back to beginning of "memory file"
             thumbio.seek(0)
             thumb = thumbio.read()
-        except:
+        except (IOError, OSError) as e:
             thumb = None
         return thumb
 
@@ -47,6 +47,6 @@ class ImageUtils:
         try:
             image = Image.open(io.BytesIO(source))
             image.save(filepath, format='PNG')
-        except:
+        except (IOError, OSError) as e:
             return False
         return True

@@ -1,79 +1,46 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+from __future__ import annotations
+import importlib, pkgutil
+from typing import Dict, List
 
-from lib.smartmodules.matchstrings.registry import (
-    VERSION_REGEXP,
-    creds_match,
-    options_match,
-    os_match,
-    products_match,
-    vulns_match,
-)
+# Global registries (service -> bucket -> [regex patterns])
+products_match: Dict[str, Dict[str, List[str]]] = {}
+options_match:  Dict[str, Dict[str, List[str]]] = {}
+vulns_match:    Dict[str, Dict[str, List[str]]] = {}
+os_match:       Dict[str, Dict[str, List[str]]] = {}
+creds_match:    Dict = {}
 
+__all__ = [
+    "products_match","options_match","vulns_match","os_match","creds_match",
+    "get_products_match","get_options_match","get_vulns_match","get_os_match","get_creds_match",
+]
 
-# ----------------------------------------------------------------------------------------
-# Credentials
-#
-# Sample:
-# creds_match['http'] = {
-#     'tool-name': {
-#         'found creds: (?P<m1>\S*):(?P<m2>\S*)': {
-#             'user': '$1',
-#             'pass': '$2',
-#             'type': 'wordpress'
-#         },
-#         'found user: (?P<m1>\S*)': {
-#             'user': '$1'
-#         }
-#     }
-# }
+_LOADED = False
 
-from lib.smartmodules.matchstrings.os.OS import *
-from lib.smartmodules.matchstrings.vulns.SshVulns import *
-from lib.smartmodules.matchstrings.vulns.SmtpVulns import *
-from lib.smartmodules.matchstrings.vulns.SmbVulns import *
-from lib.smartmodules.matchstrings.vulns.RdpVulns import *
-from lib.smartmodules.matchstrings.vulns.PostgresqlVulns import *
-from lib.smartmodules.matchstrings.vulns.OracleVulns import *
-from lib.smartmodules.matchstrings.vulns.MysqlVulns import *
-from lib.smartmodules.matchstrings.vulns.MssqlVulns import *
-from lib.smartmodules.matchstrings.vulns.JdwpVulns import *
-from lib.smartmodules.matchstrings.vulns.JavaRmiVulns import *
-from lib.smartmodules.matchstrings.vulns.HttpVulns import *
-from lib.smartmodules.matchstrings.vulns.FtpVulns import *
-from lib.smartmodules.matchstrings.products.SshServerProducts import *
-from lib.smartmodules.matchstrings.products.SmtpServerProducts import *
-from lib.smartmodules.matchstrings.products.PostgresqlServerProducts import *
-from lib.smartmodules.matchstrings.products.OracleServerProducts import *
-from lib.smartmodules.matchstrings.products.MysqlServerProducts import *
-from lib.smartmodules.matchstrings.products.MssqlServerProducts import *
-from lib.smartmodules.matchstrings.products.JavaRmiServerProducts import *
-from lib.smartmodules.matchstrings.products.HttpWebServerProducts import *
-from lib.smartmodules.matchstrings.products.HttpWebLanguageProducts import *
-from lib.smartmodules.matchstrings.products.HttpWebJslibProducts import *
-from lib.smartmodules.matchstrings.products.HttpWebFrameworkProducts import *
-from lib.smartmodules.matchstrings.products.HttpWebCmsProducts import *
-from lib.smartmodules.matchstrings.products.HttpWebApplicationFirewallProducts import *
-from lib.smartmodules.matchstrings.products.HttpWebAppserverProducts import *
-from lib.smartmodules.matchstrings.products.FtpServerProducts import *
-from lib.smartmodules.matchstrings.products.AjpServerProducts import *
-from lib.smartmodules.matchstrings.options.TelnetOptions import *
-from lib.smartmodules.matchstrings.options.SmtpOptions import *
-from lib.smartmodules.matchstrings.options.SmbOptions import *
-from lib.smartmodules.matchstrings.options.OracleOptions import *
-from lib.smartmodules.matchstrings.options.JavaRmiOptions import *
-from lib.smartmodules.matchstrings.options.HttpOptions import *
-from lib.smartmodules.matchstrings.options.FtpOptions import *
-from lib.smartmodules.matchstrings.creds.VncCreds import *
-from lib.smartmodules.matchstrings.creds.TelnetCreds import *
-from lib.smartmodules.matchstrings.creds.SshCreds import *
-from lib.smartmodules.matchstrings.creds.SnmpCreds import *
-from lib.smartmodules.matchstrings.creds.SmtpCreds import *
-from lib.smartmodules.matchstrings.creds.PostgresqlCreds import *
-from lib.smartmodules.matchstrings.creds.OracleCreds import *
-from lib.smartmodules.matchstrings.creds.MysqlCreds import *
-from lib.smartmodules.matchstrings.creds.MssqlCreds import *
-from lib.smartmodules.matchstrings.creds.JavaRmiCreds import *
-from lib.smartmodules.matchstrings.creds.HttpCreds import *
-from lib.smartmodules.matchstrings.creds.FtpCreds import *
-from lib.smartmodules.matchstrings.creds.AjpCreds import *
+def _load_pkg(modname: str) -> None:
+    try:
+        pkg = importlib.import_module(modname)
+    except Exception:
+        return
+    prefix = pkg.__name__ + "."
+    for _, name, _ in pkgutil.iter_modules(pkg.__path__, prefix):
+        importlib.import_module(name)
+
+def _ensure_loaded() -> None:
+    global _LOADED, creds_match
+    if _LOADED:
+        return
+    _load_pkg("lib.smartmodules.matchstrings.products")
+    _load_pkg("lib.smartmodules.matchstrings.options")
+    _load_pkg("lib.smartmodules.matchstrings.vulns")
+    _load_pkg("lib.smartmodules.matchstrings.os")
+    _load_pkg("lib.smartmodules.matchstrings.creds")
+    # Import creds_match from registry after loading
+    from lib.smartmodules.matchstrings.registry import creds_match as reg_creds
+    creds_match.update(reg_creds)
+    _LOADED = True
+
+def get_products_match(): _ensure_loaded(); return products_match
+def get_options_match():  _ensure_loaded(); return options_match
+def get_vulns_match():    _ensure_loaded(); return vulns_match
+def get_os_match():       _ensure_loaded(); return os_match
+def get_creds_match():    _ensure_loaded(); return creds_match

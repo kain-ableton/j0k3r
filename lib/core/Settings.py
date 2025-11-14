@@ -123,9 +123,7 @@ class Settings:
 
         # Check presence of *.conf files
         files = FileUtils.list_directory(SETTINGS_DIR)
-        for f in files:
-            if not FileUtils.check_extension(f, CONF_EXT):
-                files.remove(f)
+        files = [f for f in files if FileUtils.check_extension(f, CONF_EXT)]
 
         if not files:
             raise SettingsException('Configuration directory ({dir}) does not '
@@ -1094,8 +1092,8 @@ class Settings:
                 # Warning: read() takes filename as param
                 self.config_parsers[conf_filename].read(config_file, 'utf8')
             return True
-        except:
+        except (IOError, OSError) as e:
             logger.error('Error occured when saving changes in settings file '
-                         'named "{filename}"'.format(filename=conf_filename))
+                         'named "{filename}": {error}'.format(filename=conf_filename, error=e))
             traceback.print_exc()
             return False

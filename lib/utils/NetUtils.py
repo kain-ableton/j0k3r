@@ -24,7 +24,7 @@ class NetUtils:
         try:
             ipaddress.ip_address(string)
             return True
-        except:
+        except ValueError:
             return False
 
     @staticmethod
@@ -33,7 +33,7 @@ class NetUtils:
         try:
             ipaddress.ip_network(string, strict=False)
             return True
-        except:
+        except ValueError:
             return False
 
     @staticmethod
@@ -42,7 +42,7 @@ class NetUtils:
         try:
             port = int(string)
             return 0 <= port <= 65535
-        except:
+        except (ValueError, TypeError):
             return False
 
     @staticmethod
@@ -76,7 +76,7 @@ class NetUtils:
                 s.settimeout(1)
                 s.connect((ip, int(port)))
                 return True
-            except:
+            except (socket.error, socket.timeout, OSError):
                 time.sleep(1)
             finally:
                 # s.shutdown(socket.SHUT_RDWR)
@@ -194,7 +194,7 @@ class NetUtils:
             banner = s.recv(1024)
             return banner
             # Handle Timeout and connection refuse error
-        except:
+        except (socket.error, socket.timeout, OSError):
             return None
 
     @staticmethod
@@ -207,7 +207,7 @@ class NetUtils:
         try:
             ip_list = list(set(str(i[4][0])
                            for i in socket.getaddrinfo(host, 80)))
-        except:
+        except (socket.gaierror, socket.error):
             return None
         if len(ip_list) == 0:
             return None
@@ -222,7 +222,7 @@ class NetUtils:
         """Get hostname from IP if reverse DNS entry exists"""
         try:
             return socket.gethostbyaddr(ip)[0]
-        except:
+        except (socket.herror, socket.gaierror):
             return ip
 
     @staticmethod
@@ -232,7 +232,7 @@ class NetUtils:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
             return s.getsockname()[0]
-        except:
+        except (socket.error, OSError):
             return '127.0.0.1'
 
     @staticmethod
@@ -247,6 +247,6 @@ class NetUtils:
             s = socket.create_connection((host, 80), 2)
             s.close()
             return True
-        except:
+        except (socket.gaierror, socket.error, socket.timeout, OSError):
             pass
         return False

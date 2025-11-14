@@ -97,7 +97,7 @@ class VersionUtils:
         try:
             old_major = int(str(old)[0])
             new_major = int(str(new)[0])
-        except:
+        except (ValueError, TypeError, IndexError):
             return False
 
         if new_major != old_major:

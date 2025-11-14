@@ -152,5 +152,5 @@ class WebUtils:
             title = StringUtils.shorten(title, 250)
 
             return title
-        except:
+        except Exception:
             return ''

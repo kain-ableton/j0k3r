@@ -29,28 +29,38 @@ class SmartStart:
         self.service = service
         self.cu = ContextUpdater(self.service)
 
+    def _apply_findings(self, processor):
+        """Apply findings from MatchstringsProcessor to ContextUpdater"""
+        for option, patterns in processor.found_options.items():
+            if patterns:
+                self.cu.add_option(option, 'true')
+        
+        for product_type, patterns in processor.found_products.items():
+            if patterns:
+                self.cu.add_product(product_type, patterns[0], '')
+        
+        for os_name, patterns in processor.found_os.items():
+            if patterns:
+                self.cu.add_os(os_name)
+
     def run(self):
         """Initialize the context for the targeted service"""
         logger.smartinfo('SmartStart processing to initialize context...')
 
         # Detect if encrypted protocol (SSL/TLS) from original service name
         # (from Nmap/Shodan)
-        processor = MatchstringsProcessor(self.service,
-                                          'service-name-original',
-                                          self.service.name_original,
-                                          self.cu)
+        processor = MatchstringsProcessor(self.service, [self.service.name_original])
         processor.detect_specific_options()
+        self._apply_findings(processor)
         self.cu.update()
 
         # Update context from banner
-        processor = MatchstringsProcessor(self.service,
-                                          'banner',
-                                          self.service.banner,
-                                          self.cu)
+        processor = MatchstringsProcessor(self.service, [self.service.banner])
         processor.detect_products()
         processor.detect_specific_options()
         if not self.service.host.os:
             processor.detect_os()
+        self._apply_findings(processor)
         self.cu.update()
 
         # Run start method corresponding to target service if available
@@ -84,11 +94,9 @@ class SmartStart:
         if self.service.web_technos:
             # Detect OS
             if not self.service.host.os:
-                processor = MatchstringsProcessor(self.service,
-                                                  'wappalyzer',
-                                                  self.service.host.os,
-                                                  self.cu)
+                processor = MatchstringsProcessor(self.service, [self.service.host.os])
                 processor.detect_os()
+                self._apply_findings(processor)
 
             # Detect products
             try:

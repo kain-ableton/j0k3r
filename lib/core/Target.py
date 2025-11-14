@@ -420,7 +420,8 @@ class Target:
 
                 # print(is_reachable)
                 self.service.up = is_reachable
-            except:
+            except Exception as e:
+                logger.warning('Error checking service reachability: {}'.format(e))
                 self.service.up = False
                 return
 
