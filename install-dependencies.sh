@@ -2,27 +2,26 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-print_green() {
-    BOLD_GREEN=$(tput bold ; tput setaf 2)
-    NORMAL=$(tput sgr0)
+# Color definitions
+BOLD_BLUE=$(tput bold ; tput setaf 4)
+BOLD_GREEN=$(tput bold ; tput setaf 2)
+BOLD_RED=$(tput bold ; tput setaf 1)
+BOLD_YELLOW=$(tput bold ; tput setaf 3)
+NORMAL=$(tput sgr0)
+
+print_info() {
+    echo "${BOLD_BLUE}$1${NORMAL}"
+}
+
+print_success() {
     echo "${BOLD_GREEN}$1${NORMAL}"
 }
 
-print_yellow() {
-    BOLD_YELLOW=$(tput bold ; tput setaf 3)
-    NORMAL=$(tput sgr0)
-    echo "${BOLD_YELLOW}$1${NORMAL}"
+print_error() {
+    echo "${BOLD_RED}$1${NORMAL}" >&2
 }
 
-print_red() {
-    BOLD_YELLOW=$(tput bold ; tput setaf 1)
-    NORMAL=$(tput sgr0)
-    echo "${BOLD_YELLOW}$1${NORMAL}"
-}
-
-print_blue() {
-    BOLD_YELLOW=$(tput bold ; tput setaf 4)
-    NORMAL=$(tput sgr0)
+print_warning() {
     echo "${BOLD_YELLOW}$1${NORMAL}"
 }
 
@@ -39,27 +38,27 @@ VENV_PIP="${VENV_DIR}/bin/pip"
 
 echo
 echo
-print_blue "=============================="
-print_blue " Jok3r - Dependencies Install "
-print_blue "=============================="
+print_info "=============================="
+print_info " Jok3r - Dependencies Install "
+print_info "=============================="
 echo
 echo
-print_blue "This script will install Jok3r and all the required dependencies"
+print_info "This script will install Jok3r and all the required dependencies"
 
 # Make sure we are root !
 if [ "$EUID" -ne 0 ]; then 
-    print_red "[!] Must be run as root"
+    print_error "[!] Must be run as root"
     exit 1
 fi
 
 # Make sure we are on Debian-based OS
 OS=`(lsb_release -sd || grep NAME /etc/*-release) 2> /dev/null`
-print_blue "[~] Detected OS:"
+print_info "[~] Detected OS:"
 echo $OS
 if echo "$OS" | egrep -iq '(kali|debian|ubuntu)'; then
-    print_green "[+] Debian-based Linux OS detected !"
+    print_success "[+] Debian-based Linux OS detected !"
 else
-    print_red "[!] No Debian-based Linux OS detected (Debian/Ubuntu/Kali). Will not be able to continue !"
+    print_error "[!] No Debian-based Linux OS detected (Debian/Ubuntu/Kali). Will not be able to continue !"
     exit 1
 fi
 echo
@@ -69,7 +68,7 @@ echo
 # Verify Python3 availability (required for Kali 2025 environments)
 
 if ! command -v python3 >/dev/null 2>&1; then
-    print_red "[!] Python3 is required but not installed"
+    print_error "[!] Python3 is required but not installed"
     exit 1
 fi
 
@@ -77,40 +76,40 @@ fi
 # Prepare Python virtual environment for Jok3r dependencies
 
 if ! dpkg-query -W -f='${Status}' python3-venv 2>/dev/null | grep -q "ok installed"; then
-    print_blue "[~] Installing python3-venv package required for virtual environments"
+    print_info "[~] Installing python3-venv package required for virtual environments"
     apt-get update
     apt-get install -y python3-venv
     if ! dpkg-query -W -f='${Status}' python3-venv 2>/dev/null | grep -q "ok installed"; then
-        print_red "[!] Failed to install python3-venv"
+        print_error "[!] Failed to install python3-venv"
         exit 1
     fi
 fi
 
 if [ ! -d "${VENV_DIR}" ]; then
-    print_blue "[~] Creating Jok3r Python virtual environment at ${VENV_DIR}"
+    print_info "[~] Creating Jok3r Python virtual environment at ${VENV_DIR}"
     python3 -m venv "${VENV_DIR}"
     if [ $? -ne 0 ]; then
-        print_red "[!] Failed to create Jok3r virtual environment"
+        print_error "[!] Failed to create Jok3r virtual environment"
         exit 1
     fi
 else
-    print_green "[+] Jok3r Python virtual environment already exists"
+    print_success "[+] Jok3r Python virtual environment already exists"
 fi
 
 if [ ! -x "${VENV_PYTHON}" ]; then
-    print_red "[!] Jok3r virtual environment is missing the python binary"
+    print_error "[!] Jok3r virtual environment is missing the python binary"
     exit 1
 fi
 
-print_blue "[~] Upgrading pip inside Jok3r virtual environment"
+print_info "[~] Upgrading pip inside Jok3r virtual environment"
 "${VENV_PYTHON}" -m pip install --upgrade pip
 if [ $? -ne 0 ]; then
-    print_red "[!] Failed to upgrade pip inside the Jok3r virtual environment"
+    print_error "[!] Failed to upgrade pip inside the Jok3r virtual environment"
     exit 1
 fi
 
 if [ ! -x "${VENV_PIP}" ]; then
-    print_red "[!] pip not found inside the Jok3r virtual environment"
+    print_error "[!] pip not found inside the Jok3r virtual environment"
     exit 1
 fi
 
@@ -120,7 +119,7 @@ print_delimiter
 # Add Kali repositories if not on Kali (Debian/Ubuntu)
 
 if ! grep -q "deb http://http.kali.org/kali kali-rolling main" /etc/apt/sources.list; then
-    print_blue "[~] Add Kali repository (because missing in /etc/apt/sources.list)"
+    print_info "[~] Add Kali repository (because missing in /etc/apt/sources.list)"
     cp /etc/apt/sources.list /etc/apt/sources.list.bak
     echo "deb http://http.kali.org/kali kali-rolling main non-free contrib" >> /etc/apt/sources.list
     cd /tmp/
@@ -130,18 +129,18 @@ if ! grep -q "deb http://http.kali.org/kali kali-rolling main" /etc/apt/sources.
     apt-get update
     apt-get install -y kali-archive-keyring
     if [ $? -eq 0 ]; then
-        print_green "[+] Kali repository added with success"
+        print_success "[+] Kali repository added with success"
     else
-        print_red "[!] Error occured while adding Kali repository"
+        print_error "[!] Error occurred while adding Kali repository"
         exit 1
     fi
 else
-    print_blue "[~] Kali repository detected in /etc/apt/sources.list. Updating repositories..."
+    print_info "[~] Kali repository detected in /etc/apt/sources.list. Updating repositories..."
     apt-get update
     if [ $? -eq 0 ]; then
-        print_green "[+] Repositories updated with success"
+        print_success "[+] Repositories updated with success"
     else
-        print_red "[!] Error occured while updating repositories"
+        print_error "[!] Error occurred while updating repositories"
         exit 1
     fi
 fi
@@ -151,23 +150,23 @@ print_delimiter
 # Install Git
 
 if ! command -v git >/dev/null 2>&1; then
-    print_blue "[~] Install git ..."
+    print_info "[~] Install git ..."
     apt-get install -y git
     if command -v git >/dev/null 2>&1; then
-        print_green "[+] Git installed successfully"
+        print_success "[+] Git installed successfully"
     else
-        print_red "[!] An error occured during Git install"
+        print_error "[!] An error occurred during Git install"
         exit 1
     fi
 else
-    print_green "[+] Git is already installed"
+    print_success "[+] Git is already installed"
 fi
 print_delimiter
 
 # -----------------------------------------------------------------------------
 # Install various required packages 
 
-print_blue "[~] Install various required packages (if missing)"
+print_info "[~] Install various required packages (if missing)"
 
 PACKAGES="
 alien
@@ -213,7 +212,7 @@ zlib1g-dev
 for package in $PACKAGES; do
     if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "ok installed"; then
         echo
-        print_blue "[~] Install ${package} ..."
+        print_info "[~] Install ${package} ..."
         apt-get install -y "$package"
     fi
 done
@@ -223,16 +222,16 @@ print_delimiter
 # Install Metasploit-framework
 
 if ! command -v msfconsole >/dev/null 2>&1; then
-    print_blue "[~] Install Metasploit ..."
+    print_info "[~] Install Metasploit ..."
     apt-get install -y metasploit-framework 
     if command -v msfconsole >/dev/null 2>&1; then
-        print_green "[+] Metasploit installed successfully"
+        print_success "[+] Metasploit installed successfully"
     else
-        print_red "[!] An error occured during Metasploit install"
+        print_error "[!] An error occurred during Metasploit install"
         exit 1
     fi        
 else
-    print_green "[+] Metasploit is already installed"
+    print_success "[+] Metasploit is already installed"
 fi
 print_delimiter
 
@@ -240,16 +239,16 @@ print_delimiter
 # Install Nmap 
 
 if ! command -v nmap >/dev/null 2>&1; then
-    print_blue "[~] Install Nmap ..."
+    print_info "[~] Install Nmap ..."
     apt-get install -y nmap 
     if command -v nmap >/dev/null 2>&1; then
-        print_green "[+] Nmap installed successfully"
+        print_success "[+] Nmap installed successfully"
     else
-        print_red "[!] An error occured during Nmap install"
+        print_error "[!] An error occurred during Nmap install"
         exit 1
     fi   
 else
-    print_green "[+] Nmap is already installed"
+    print_success "[+] Nmap is already installed"
 fi
 print_delimiter
 
@@ -257,33 +256,33 @@ print_delimiter
 # Install Tcpdump
 
 if ! command -v tcpdump >/dev/null 2>&1; then
-    print_blue "[~] Install tcpdump ..."
+    print_info "[~] Install tcpdump ..."
     apt-get install -y tcpdump
     if command -v tcpdump >/dev/null 2>&1; then
-        print_green "[+] tcpdump installed successfully"
+        print_success "[+] tcpdump installed successfully"
     else
-        print_red "[!] An error occured during tcpdump install"
+        print_error "[!] An error occurred during tcpdump install"
         exit 1
     fi   
 else
-    print_green "[+] tcpdump is already installed"
+    print_success "[+] tcpdump is already installed"
 fi
 print_delimiter
 
 # -----------------------------------------------------------------------------
 
 # if ! command -v npm >/dev/null 2>&1; then
-#     print_green "[~] Install NodeJS ..."
+#     print_success "[~] Install NodeJS ..."
 #     curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
 #     apt-get install -y nodejs
 # else
-#     print_green "[+] NodeJS is already installed"
+#     print_success "[+] NodeJS is already installed"
 # fi
 # print_delimiter   
 
 # -----------------------------------------------------------------------------
 # Install Python and related packages
-print_blue "[~] Install Python 3 and useful related packages (if missing)"
+print_info "[~] Install Python 3 and useful related packages (if missing)"
 
 PACKAGES="
 python3
@@ -301,21 +300,21 @@ python3-shodan
 for package in $PACKAGES; do
     if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "ok installed"; then
         echo
-        print_blue "[~] Install ${package} ..."
+        print_info "[~] Install ${package} ..."
         apt-get install -y "$package"
     fi
 done
 
 if command -v python3 >/dev/null 2>&1; then
-    print_green "[+] Python3 installed successfully"
+    print_success "[+] Python3 installed successfully"
 else
-    print_red "[!] An error occured during Python3 install"
+    print_error "[!] An error occurred during Python3 install"
     exit 1
 fi
 if command -v pip3 >/dev/null 2>&1; then
-    print_green "[+] pip3 installed successfully"
+    print_success "[+] pip3 installed successfully"
 else
-    print_red "[!] An error occured during pip3 install"
+    print_error "[!] An error occurred during pip3 install"
     exit 1
 fi
 print_delimiter
@@ -323,11 +322,11 @@ print_delimiter
 # -----------------------------------------------------------------------------
 # Install Python virtualenv
 
-print_blue "[~] Python3 virtual environments handled via built-in venv module"
+print_info "[~] Python3 virtual environments handled via built-in venv module"
 if command -v virtualenv >/dev/null 2>&1; then
-    print_green "[+] Legacy virtualenv command already installed"
+    print_success "[+] Legacy virtualenv command already installed"
 else
-    print_blue "[~] Skipping virtualenv (python3 -m venv will be used)"
+    print_info "[~] Skipping virtualenv (python3 -m venv will be used)"
 fi
 print_delimiter
 
@@ -339,7 +338,7 @@ print_delimiter
 # setup.py. Then virtualenv for Python projects are created with 
 # --system-site-package option which allows to access those libraries.
 
-print_blue "[~] Install common Python libraries..."
+print_info "[~] Install common Python libraries..."
 
 LIBPY3="
 aiohttp
@@ -485,16 +484,16 @@ print_delimiter
 # Install Jython
 
 if ! command -v jython >/dev/null 2>&1; then
-    print_blue "[~] Install Jython"
+    print_info "[~] Install Jython"
     apt-get install -y jython
     if command -v jython >/dev/null 2>&1; then
-        print_green "[+] Jython installed successfully"
+        print_success "[+] Jython installed successfully"
     else
-        print_red "[!] An error occured during Jython install"
+        print_error "[!] An error occurred during Jython install"
         exit 1
     fi   
 else
-    print_green "[+] Jython is already installed"
+    print_success "[+] Jython is already installed"
 fi
 print_delimiter
 
@@ -502,16 +501,16 @@ print_delimiter
 # Install Ruby
 
 if ! command -v ruby >/dev/null 2>&1; then
-    print_blue "[~] Install Ruby"
+    print_info "[~] Install Ruby"
     apt-get install -y ruby ruby-dev
     if command -v ruby >/dev/null 2>&1; then
-        print_green "[+] Ruby installed successfully"
+        print_success "[+] Ruby installed successfully"
     else
-        print_red "[!] An error occured during Ruby install"
+        print_error "[!] An error occurred during Ruby install"
         exit 1
     fi   
 else
-    print_green "[+] Ruby is already installed"
+    print_success "[+] Ruby is already installed"
 fi
 print_delimiter
 
@@ -519,7 +518,7 @@ print_delimiter
 # Update Ruby bundler (system Ruby)
 
 if command -v gem >/dev/null 2>&1; then
-    print_blue "[~] Update Ruby bundler"
+    print_info "[~] Update Ruby bundler"
     gem install bundler
     print_delimiter
 fi
@@ -528,16 +527,16 @@ fi
 # Install Perl
 
 if ! command -v perl >/dev/null 2>&1; then
-    print_blue "[~] Install Perl"
+    print_info "[~] Install Perl"
     apt-get install -y perl 
     if command -v perl >/dev/null 2>&1; then
-        print_green "[+] Perl installed successfully"
+        print_success "[+] Perl installed successfully"
     else
-        print_red "[!] An error occured during Perl install"
+        print_error "[!] An error occurred during Perl install"
         exit 1
     fi   
 else
-    print_green "[+] Perl is already installed"
+    print_success "[+] Perl is already installed"
 fi
 print_delimiter
 
@@ -545,16 +544,16 @@ print_delimiter
 # Install PHP
 
 if ! command -v php >/dev/null 2>&1; then
-    print_blue "[~] Install PHP"
+    print_info "[~] Install PHP"
     apt-get install -y php
     if command -v php >/dev/null 2>&1; then
-        print_green "[+] PHP installed successfully"
+        print_success "[+] PHP installed successfully"
     else
-        print_red "[!] An error occured during PHP install"
+        print_error "[!] An error occurred during PHP install"
         exit 1
     fi   
 else
-    print_green "[+] PHP is already installed"
+    print_success "[+] PHP is already installed"
 fi
 print_delimiter
 
@@ -562,7 +561,7 @@ print_delimiter
 # Install Java
 
 if ! command -v java >/dev/null 2>&1; then
-    print_blue "[~] Install Java"
+    print_info "[~] Install Java"
     apt-get install -y default-jdk
     if command -v java >/dev/null 2>&1; then
         print_green "[+] Java installed successfully"
@@ -571,7 +570,7 @@ if ! command -v java >/dev/null 2>&1; then
         exit 1
     fi   
 else
-    print_green "[+] Java is already installed"
+    print_success "[+] Java is already installed"
 fi
 print_delimiter
 
@@ -579,16 +578,16 @@ print_delimiter
 # Install Firefox
 
 if ! command -v firefox >/dev/null 2>&1; then
-    print_blue "[~] Install Firefox (for HTML reports and web screenshots)"
+    print_info "[~] Install Firefox (for HTML reports and web screenshots)"
     apt-get install -y firefox-esr
     if command -v firefox >/dev/null 2>&1; then
-        print_green "[+] Firefox installed successfully"
+        print_success "[+] Firefox installed successfully"
     else
-        print_red "[!] An error occured during Firefox install"
+        print_error "[!] An error occurred during Firefox install"
         exit 1
     fi   
 else
-    print_green "[+] Firefox is already installed"
+    print_success "[+] Firefox is already installed"
 fi
 print_delimiter
 
@@ -596,37 +595,37 @@ print_delimiter
 # Install Geckodriver
 
 if ! command -v geckodriver >/dev/null 2>&1; then
-    print_blue "[~] Install Geckodriver (for web screenshots)"
+    print_info "[~] Install Geckodriver (for web screenshots)"
     apt-get install -y geckodriver
     if command -v geckodriver >/dev/null 2>&1; then
-        print_green "[+] Geckodriver installed successfully"
+        print_success "[+] Geckodriver installed successfully"
     else
-        print_red "[!] An error occured during Geckodriver install"
+        print_error "[!] An error occurred during Geckodriver install"
         exit 1
     fi
 else
-    print_green "[+] Geckodriver is already installed"
+    print_success "[+] Geckodriver is already installed"
 fi
 print_delimiter
 
 # -----------------------------------------------------------------------------
 
-print_blue "[~] Install Python3 libraries required by Jok3r (if missing)"
+print_info "[~] Install Python3 libraries required by Jok3r (if missing)"
 "${VENV_PIP}" install -r "${SCRIPT_DIR}/requirements.txt"
 if [ $? -ne 0 ]; then
-    print_red "[!] Failed to install Jok3r Python requirements"
+    print_error "[!] Failed to install Jok3r Python requirements"
     exit 1
 fi
 "${VENV_PIP}" install --upgrade requests
 if [ $? -ne 0 ]; then
-    print_red "[!] Failed to upgrade requests inside the Jok3r virtual environment"
+    print_error "[!] Failed to upgrade requests inside the Jok3r virtual environment"
     exit 1
 fi
 print_delimiter
 
 # -----------------------------------------------------------------------------
 
-print_blue "[~] Disable UserWarning related to psycopg2"
+print_info "[~] Disable UserWarning related to psycopg2"
 "${VENV_PIP}" uninstall psycopg2-binary -y
 "${VENV_PIP}" uninstall psycopg2 -y
 "${VENV_PIP}" install psycopg2-binary
@@ -634,13 +633,13 @@ print_delimiter
 
 # -----------------------------------------------------------------------------
 
-print_blue "[~] Cleaning apt cache..."
+print_info "[~] Cleaning apt cache..."
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 print_delimiter
 
 # -----------------------------------------------------------------------------
 
-print_green "[~] Dependencies installation finished."
-print_green "[~] IMPORTANT: Make sure to check if any error has been raised"
+print_success "[~] Dependencies installation finished."
+print_success "[~] IMPORTANT: Make sure to check if any error has been raised"
 echo

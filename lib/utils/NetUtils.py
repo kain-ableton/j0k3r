@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 ###
-### Utils > WebUtils
+### Utils > NetUtils
 ###
-import socket
+# Standard library imports
 import ipaddress
+import socket
 import time
-from libnmap.process import NmapProcess
-from libnmap.parser import NmapParser, NmapParserException
 
+# Third-party imports
+from libnmap.parser import NmapParser, NmapParserException
+from libnmap.process import NmapProcess
+
+# Local imports
 from lib.utils.OSUtils import OSUtils
 
 

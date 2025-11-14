@@ -4,25 +4,30 @@
 # Core > Arguments parser
 ###
 # PYTHON_ARGCOMPLETE_OK
+# Standard library imports
 import copy
 import json
 import os
 import sys
 from collections import defaultdict
 
+# Third-party imports
+# (None in this module)
+
+# Local imports
 from lib.core.Config import *
 from lib.core.Constants import *
 from lib.core.Exceptions import ArgumentsException
+from lib.db.Credential import Credential
+from lib.db.Option import Option
+from lib.db.Product import Product
+from lib.output.Logger import logger
+from lib.output.Output import Output
 from lib.requester.Condition import Condition
 from lib.requester.Filter import Filter
 from lib.utils.ArgParseUtils import *
 from lib.utils.FileUtils import FileUtils
 from lib.utils.WebUtils import WebUtils
-from lib.output.Logger import logger
-from lib.output.Output import Output
-from lib.db.Credential import Credential
-from lib.db.Option import Option
-from lib.db.Product import Product
 
 
 class ArgumentsParser:
