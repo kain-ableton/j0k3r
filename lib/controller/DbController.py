@@ -817,7 +817,7 @@ class DbController(cmd2.Cmd):
         if add:
             try:
                 service_id = int(add[0])
-            except:
+            except ValueError:
                 logger.error('Invalid service id')
                 return
 
@@ -1670,7 +1670,7 @@ class DbController(cmd2.Cmd):
             if args.service_id:
                 try:
                     service_id = int(args.service_id)
-                except:
+                except ValueError:
                     logger.error('Invalid service id (wrong format)')
                     print()
                     return
@@ -1702,7 +1702,7 @@ class DbController(cmd2.Cmd):
             if args.check_id:
                 try:
                     check_id = int(args.check_id)
-                except:
+                except ValueError:
                     logger.error('Invalid check id (wrong format)')
                     print()
                     return
