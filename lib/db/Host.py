@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-###
-### Db > Host
-###
+#
+# Db > Host
+#
 import ipaddress
 
 from sqlalchemy import ForeignKey, Column, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_method
-#from sqlalchemy_utils import IPAddressType
+# from sqlalchemy_utils import IPAddressType
 from lib.db.IPAddressType import IPAddressType
 
 from lib.db.Service import Service, Protocol
@@ -31,8 +31,12 @@ class Host(Base):
     mission_id = Column(Integer, ForeignKey('missions.id'))
 
     mission = relationship('Mission', back_populates='hosts')
-    services = relationship('Service', order_by=Service.port, back_populates='host',
-                            cascade='save-update, merge, delete, delete-orphan')
+    services = relationship(
+        'Service',
+        order_by=Service.port,
+        back_populates='host',
+        cascade='save-update, merge, delete, delete-orphan'
+    )
 
     # ------------------------------------------------------------------------------------
 
@@ -90,7 +94,9 @@ class Host(Base):
     @hybrid_method
     def get_nb_services(self, proto=Protocol.TCP):
         """
-        Get number of services on the specified protocol referenced for this host.
+        Get number of services on the specified protocol referenced
+        for this host.
+
         :param lib.db.Service.Protocol proto: Protocol (TCP/UDP)
         :return: Number of services for the specified protocol
         :rtype: int
@@ -105,9 +111,12 @@ class Host(Base):
     @hybrid_method
     def get_nb_credentials(self, single_username=False):
         """
-        Get total number of credentials for all services referenced for this host.
-        :param bool single_username: If True, get the number of single usernames 
-            (password unknown). If False, get the number of username/password couples
+        Get total number of credentials for all services referenced
+        for this host.
+
+        :param bool single_username: If True, get the number of single
+            usernames (password unknown). If False, get the number of
+            username/password couples
         :return: Number of selected credentials
         :rtype: int
         """
@@ -118,14 +127,18 @@ class Host(Base):
                     if cred.username is not None and cred.password is None:
                         nb += 1
                 else:
-                    if cred.username is not None and cred.password is not None:
+                    username_set = cred.username is not None
+                    password_set = cred.password is not None
+                    if username_set and password_set:
                         nb += 1
         return nb
 
     @hybrid_method
     def get_nb_vulns(self):
         """
-        Get total number of vulnerabilities for all services referenced for this host.
+        Get total number of vulnerabilities for all services referenced
+        for this host.
+
         :return: Number of selected vulnerabilities
         :rtype: int
         """

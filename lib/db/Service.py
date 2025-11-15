@@ -5,12 +5,11 @@
 ###
 import enum
 from sqlalchemy import ForeignKey, Column, Integer, String, Text, Boolean
-#from sqlalchemy.types import Enum
+# from sqlalchemy.types import Enum
 import sqlalchemy.types
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_method
 
-from lib.core.Config import *
 from lib.db.Credential import Credential
 from lib.db.Option import Option
 from lib.db.Product import Product
@@ -44,20 +43,44 @@ class Service(Base):
     host_id = Column(Integer, ForeignKey('hosts.id'))
 
     host = relationship('Host', back_populates='services')
-    credentials = relationship('Credential', order_by=Credential.username,
-                               back_populates='service', cascade='save-update, merge, delete, delete-orphan')
-    options = relationship('Option', order_by=Option.name,
-                           back_populates='service', cascade='save-update, merge, delete, delete-orphan')
-    products = relationship('Product', order_by=Product.type,
-                            back_populates='service', cascade='save-update, merge, delete, delete-orphan')
-    results = relationship('Result', order_by=Result.id,
-                           back_populates='service', cascade='save-update, merge, delete, delete-orphan')
-    vulns = relationship('Vuln', order_by=Vuln.id,
-                         back_populates='service', cascade='save-update, merge, delete, delete-orphan')
-    screenshot = relationship('Screenshot', uselist=False,
-                              back_populates='service', cascade='save-update, merge, delete, delete-orphan')
+    credentials = relationship(
+        'Credential',
+        order_by=Credential.username,
+        back_populates='service',
+        cascade='save-update, merge, delete, delete-orphan'
+    )
+    options = relationship(
+        'Option',
+        order_by=Option.name,
+        back_populates='service',
+        cascade='save-update, merge, delete, delete-orphan'
+    )
+    products = relationship(
+        'Product',
+        order_by=Product.type,
+        back_populates='service',
+        cascade='save-update, merge, delete, delete-orphan'
+    )
+    results = relationship(
+        'Result',
+        order_by=Result.id,
+        back_populates='service',
+        cascade='save-update, merge, delete, delete-orphan'
+    )
+    vulns = relationship(
+        'Vuln',
+        order_by=Vuln.id,
+        back_populates='service',
+        cascade='save-update, merge, delete, delete-orphan'
+    )
+    screenshot = relationship(
+        'Screenshot',
+        uselist=False,
+        back_populates='service',
+        cascade='save-update, merge, delete, delete-orphan'
+    )
 
-    # ------------------------------------------------------------------------------------
+    # --------------------------------------------------------------------
 
     @hybrid_method
     def merge(self, dst):
@@ -65,10 +88,10 @@ class Service(Base):
         Merge with another Service
         matching_service.merge(new_service)
 
-        :param Service dst: Service that we want to merge with (this is typîcally
-            a new service that we want to add but there is already a matching 
-            service in db, so we will not add this new service but update the matching
-            one)
+        :param Service dst: Service that we want to merge with (this is
+            typically a new service that we want to add but there is
+            already a matching service in db, so we will not add this new
+            service but update the matching one)
         """
         if dst.up != self.up:
             self.up = dst.up
