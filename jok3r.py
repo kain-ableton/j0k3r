@@ -19,6 +19,17 @@ from lib.db.Mission import Mission
 from lib.db.Session import Base, engine, session_scope
 from lib.output.Logger import logger
 
+# Import all database models to ensure SQLAlchemy relationships can be resolved
+from lib.db.Host import Host  # noqa: F401
+from lib.db.Service import Service  # noqa: F401
+from lib.db.Screenshot import Screenshot  # noqa: F401
+from lib.db.Credential import Credential  # noqa: F401
+from lib.db.Option import Option  # noqa: F401
+from lib.db.Product import Product  # noqa: F401
+from lib.db.Result import Result  # noqa: F401
+from lib.db.Vuln import Vuln  # noqa: F401
+from lib.db.CommandOutput import CommandOutput  # noqa: F401
+
 
 def ensure_database_initialized():
     """Create required database tables if they do not already exist."""

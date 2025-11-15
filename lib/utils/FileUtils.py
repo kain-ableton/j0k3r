@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-###
-### Utils > FileUtils
-###
+#
+# Utils > FileUtils
+#
 import os
 import stat
 import shutil
@@ -72,7 +72,11 @@ class FileUtils:
             if not FileUtils.exists(directory):
                 os.makedirs(directory)
             return True
-        except:
+        except OSError:
+            # Log or handle specific OS errors (permission, disk full, etc.)
+            return False
+        except Exception:
+            # Catch any other unexpected errors
             return False
 
     @staticmethod
@@ -81,7 +85,11 @@ class FileUtils:
             if FileUtils.is_dir(directory):
                 shutil.rmtree(directory, onerror=FileUtils.remove_readonly)
             return True
-        except:
+        except OSError:
+            # Handle permission errors, directory not empty, etc.
+            return False
+        except Exception:
+            # Catch any other unexpected errors
             return False
 
     @staticmethod
@@ -89,7 +97,11 @@ class FileUtils:
         try:
             if FileUtils.is_dir(directory):
                 return os.listdir(directory)
-        except:
+        except OSError:
+            # Handle permission errors, directory not found, etc.
+            return False
+        except Exception:
+            # Catch any other unexpected errors
             return False
 
     @staticmethod

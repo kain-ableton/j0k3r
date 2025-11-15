@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-###
-### Db > Credential
-###
+#
+# Db > Credential
+#
 from sqlalchemy import ForeignKey, Column, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_method

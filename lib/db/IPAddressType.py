@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-###
-### Db > IPAddressType
-###
+#
+# Db > IPAddressType
+#
 import ipaddress
 
 from sqlalchemy import types
@@ -13,9 +13,9 @@ class IPAddressType(types.TypeDecorator):
     Inspired from https://sqlalchemy-utils.readthedocs.io/en/latest/
     _modules/sqlalchemy_utils/types/ip_address.html
 
-    Change an IP address in normal representation (string) to an integer 
+    Change an IP address in normal representation (string) to an integer
     representation on the way in and changes them back to string on the
-    way out. 
+    way out.
     """
 
     impl = types.Integer
