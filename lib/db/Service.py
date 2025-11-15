@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-###
-### Db > Service
-###
+#
+# Db > Service
+#
 import enum
 from sqlalchemy import ForeignKey, Column, Integer, String, Text, Boolean
 # from sqlalchemy.types import Enum
@@ -10,6 +10,7 @@ import sqlalchemy.types
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_method
 
+from lib.core.Config import OPTIONS_ENCRYTPED_PROTO
 from lib.db.Credential import Credential
 from lib.db.Option import Option
 from lib.db.Product import Product
@@ -250,8 +251,10 @@ class Service(Base):
     def get_nb_credentials(self, single_username=False):
         """
         Get total number of credentials for the service.
-        :param bool single_username: If True, get the number of single usernames 
-            (password unknown). If False, get the number of username/password couples
+
+        :param bool single_username: If True, get the number of single
+            usernames (password unknown). If False, get the number of
+            username/password couples
         :return: Number of selected credentials
         :rtype: int
         """
@@ -265,11 +268,12 @@ class Service(Base):
                     nb += 1
         return nb
 
-    # ------------------------------------------------------------------------------------
+    # --------------------------------------------------------------------
 
     def __repr__(self):
-        return '<Service(name="{name}", port="{port}", protocol="{protocol}", ' \
-            'url="{url}", up="{up}", banner="{banner}", ' \
+        return (
+            '<Service(name="{name}", port="{port}", protocol="{protocol}", '
+            'url="{url}", up="{up}", banner="{banner}", '
             'http_headers="{http_headers}", comment="{comment}")>'.format(
                 name=self.name,
                 port=self.port,
@@ -278,5 +282,7 @@ class Service(Base):
                 up=self.up,
                 banner=self.banner,
                 http_headers=self.http_headers,
-                #info         = self.info,
-                comment=self.comment)
+                # info         = self.info,
+                comment=self.comment
+            )
+        )
